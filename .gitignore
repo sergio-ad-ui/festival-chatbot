@@ -1,7 +1,32 @@
-# Byte-compiled / optimized / DLL files
+# File di ambiente
+.env
+.env.*
+
+# File di test e configurazione temporanei
+check_*.py
+test_*.py
+*_webhook.py
+configure_*.py
+register_*.py
+get_*.py
+update_*.py
+
+# Cache Python
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Cartella virtuale Python
+venv/
+env/
+ENV/
+
+# File di log
+*.log
+
+# File di sistema
+.DS_Store
+Thumbs.db
 
 # C extensions
 *.so
@@ -11,24 +36,9 @@ dist/
 build/
 *.egg-info/
 
-# Virtual environments
-venv/
-env/
-ENV/
-
-# Environment variables
-.env
-
 # Local development settings
 .vscode/
 .idea/
 
-# Logs
-*.log
-
 # Database
-*.db
-
-# OS specific files
-.DS_Store
-Thumbs.db 
+*.db 

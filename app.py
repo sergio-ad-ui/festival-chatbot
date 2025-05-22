@@ -18,6 +18,7 @@ app = Flask(__name__)
 
 # Configurazione OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
+openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Configurazione MongoDB
 mongo_client = MongoClient(os.getenv("MONGODB_URI"))
@@ -26,6 +27,8 @@ conversations_collection = db["conversations"]
 festival_info_collection = db["festival_info"]
 
 # Configurazione WhatsApp API
+# IMPORTANTE: Aggiornare il token di accesso WhatsApp nel file .env 
+# poiché il token attuale è scaduto (21-May-25)
 WHATSAPP_API_TOKEN = os.getenv("WHATSAPP_API_TOKEN")
 WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 WHATSAPP_API_URL = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
@@ -167,8 +170,8 @@ def generate_ai_response(conversation):
             messages.append({"role": msg["role"], "content": msg["content"]})
     
     try:
-        # Chiamata all'API di OpenAI
-        response = openai.ChatCompletion.create(
+        # Chiamata all'API OpenAI aggiornata (versione 1.0+)
+        response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages,
             max_tokens=MAX_TOKENS,
