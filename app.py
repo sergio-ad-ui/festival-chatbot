@@ -52,10 +52,14 @@ def verify_webhook():
     
     verify_token = os.getenv("VERIFY_TOKEN", "festival_bot_verify_token")
     
+    print(f"Verifica webhook: mode={mode}, token={token}, challenge={challenge}, verify_token={verify_token}")
+    
     if mode and token:
         if mode == "subscribe" and token == verify_token:
+            print(f"Verifica webhook riuscita! Rispondendo con challenge: {challenge}")
             return challenge, 200
         else:
+            print(f"Verifica webhook fallita! Token non corrisponde o mode non è 'subscribe'")
             return "Verifica fallita", 403
     
     return "Hello World", 200
@@ -63,22 +67,33 @@ def verify_webhook():
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
+    print(f"Ricevuto webhook POST: {json.dumps(data)}")
     
     # Verifica se è un messaggio WhatsApp
-    if data["object"] == "whatsapp_business_account":
-        for entry in data["entry"]:
+    if data.get("object") == "whatsapp_business_account":
+        for entry in data.get("entry", []):
             for change in entry.get("changes", []):
-                if change["field"] == "messages":
-                    for message in change["value"].get("messages", []):
-                        if message["type"] == "text":
+                if change.get("field") == "messages":
+                    value = change.get("value", {})
+                    messages = value.get("messages", [])
+                    
+                    print(f"Ricevuti {len(messages)} messaggi")
+                    
+                    for message in messages:
+                        print(f"Elaborazione messaggio: {json.dumps(message)}")
+                        if message.get("type") == "text":
                             handle_text_message(message)
                         # Puoi gestire altri tipi di messaggi qui (immagini, audio, ecc.)
+    else:
+        print(f"Oggetto webhook non riconosciuto: {data.get('object')}")
     
     return "OK", 200
 
 def handle_text_message(message):
-    sender_id = message["from"]
-    message_text = message["text"]["body"]
+    sender_id = message.get("from")
+    message_text = message.get("text", {}).get("body", "")
+    
+    print(f"Gestione messaggio da {sender_id}: {message_text}")
     
     # Ottieni o crea la conversazione
     conversation = get_or_create_conversation(sender_id)
@@ -91,7 +106,9 @@ def handle_text_message(message):
     })
     
     # Ottieni risposta dall'AI
+    print(f"Generazione risposta AI per {sender_id}")
     ai_response = generate_ai_response(conversation)
+    print(f"Risposta AI generata: {ai_response}")
     
     # Aggiungi la risposta dell'AI alla conversazione
     conversation["messages"].append({
@@ -107,7 +124,9 @@ def handle_text_message(message):
     )
     
     # Invia risposta a WhatsApp
-    send_whatsapp_message(sender_id, ai_response)
+    print(f"Invio risposta a {sender_id}: {ai_response}")
+    success = send_whatsapp_message(sender_id, ai_response)
+    print(f"Risposta inviata con successo: {success}")
 
 def get_or_create_conversation(sender_id):
     # Cerca una conversazione esistente non scaduta
@@ -187,11 +206,19 @@ def send_whatsapp_message(recipient_id, message_text):
     }
     
     try:
+        print(f"Invio messaggio WhatsApp: {json.dumps(payload)}")
+        print(f"Headers: {json.dumps(WHATSAPP_HEADERS)}")
+        print(f"URL: {WHATSAPP_API_URL}")
+        
         response = requests.post(
             WHATSAPP_API_URL,
             headers=WHATSAPP_HEADERS,
             json=payload
         )
+        
+        print(f"Risposta API WhatsApp: Status {response.status_code}")
+        print(f"Risposta API WhatsApp: Body {response.text}")
+        
         response.raise_for_status()
         return True
     except Exception as e:
