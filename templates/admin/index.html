@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pannello di Amministrazione - Festival Chatbot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 2rem;
+        }
+        .card {
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="mb-4">
+            <h1 class="text-center">Pannello di Amministrazione Festival</h1>
+            <p class="text-center text-muted">Gestisci le informazioni del tuo festival</p>
+        </header>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="h5 mb-0">Informazioni Festival</h2>
+                    </div>
+                    <div class="card-body">
+                        <p>Gestisci le informazioni generali sul festival, come date, location, contatti, FAQ, ecc.</p>
+                        <a href="#" class="btn btn-primary" id="festival-info-btn">Gestisci</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h2 class="h5 mb-0">Eventi e Programma</h2>
+                    </div>
+                    <div class="card-body">
+                        <p>Gestisci gli eventi, gli orari e le performance del festival.</p>
+                        <a href="#" class="btn btn-success" id="events-btn">Gestisci</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h2 class="h5 mb-0">Mappa</h2>
+                    </div>
+                    <div class="card-body">
+                        <p>Gestisci i punti di interesse sulla mappa del festival.</p>
+                        <a href="#" class="btn btn-info" id="map-btn">Gestisci</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <div id="content-area" class="border p-3 rounded">
+                <p class="text-center text-muted">Seleziona una sezione per iniziare a gestire il tuo festival</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates per i form -->
+    <template id="festival-info-template">
+        <h3>Informazioni Festival</h3>
+        <div class="mb-3">
+            <button class="btn btn-primary btn-sm" id="add-info-btn">Aggiungi Informazione</button>
+        </div>
+        <div id="info-form" class="mb-3 border p-3 rounded d-none">
+            <h4>Aggiungi/Modifica Informazione</h4>
+            <form id="festival-info-form">
+                <input type="hidden" id="info-id">
+                <div class="mb-2">
+                    <label for="category" class="form-label">Categoria</label>
+                    <input type="text" class="form-control" id="category" required>
+                    <small class="text-muted">Es. location, date, contatti, regolamento, ecc.</small>
+                </div>
+                <div class="mb-2">
+                    <label for="content" class="form-label">Contenuto</label>
+                    <textarea class="form-control" id="content" rows="5" required></textarea>
+                </div>
+                <div class="mb-2">
+                    <label for="priority" class="form-label">Priorità</label>
+                    <input type="number" class="form-control" id="priority" value="0">
+                </div>
+                <button type="submit" class="btn btn-primary">Salva</button>
+                <button type="button" class="btn btn-secondary" id="cancel-info-btn">Annulla</button>
+            </form>
+        </div>
+        <div id="info-list" class="mt-3">
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Caricamento...</span>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="events-template">
+        <h3>Eventi e Programma</h3>
+        <div class="mb-3">
+            <button class="btn btn-success btn-sm" id="add-event-btn">Aggiungi Evento</button>
+        </div>
+        <div id="event-form" class="mb-3 border p-3 rounded d-none">
+            <h4>Aggiungi/Modifica Evento</h4>
+            <form id="event-form-element">
+                <input type="hidden" id="event-id">
+                <div class="mb-2">
+                    <label for="event-name" class="form-label">Nome Evento</label>
+                    <input type="text" class="form-control" id="event-name" required>
+                </div>
+                <div class="mb-2">
+                    <label for="event-description" class="form-label">Descrizione</label>
+                    <textarea class="form-control" id="event-description" rows="3" required></textarea>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-2">
+                            <label for="event-start" class="form-label">Data e Ora Inizio</label>
+                            <input type="datetime-local" class="form-control" id="event-start" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-2">
+                            <label for="event-end" class="form-label">Data e Ora Fine</label>
+                            <input type="datetime-local" class="form-control" id="event-end" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label for="event-location" class="form-label">Location</label>
+                    <input type="text" class="form-control" id="event-location" required>
+                </div>
+                <div class="mb-2">
+                    <label for="event-artists" class="form-label">Artisti (separati da virgole)</label>
+                    <input type="text" class="form-control" id="event-artists">
+                </div>
+                <button type="submit" class="btn btn-success">Salva</button>
+                <button type="button" class="btn btn-secondary" id="cancel-event-btn">Annulla</button>
+            </form>
+        </div>
+        <div id="event-list" class="mt-3">
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Caricamento...</span>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="map-template">
+        <h3>Mappa del Festival</h3>
+        <div class="mb-3">
+            <button class="btn btn-info btn-sm" id="add-point-btn">Aggiungi Punto</button>
+        </div>
+        <div id="point-form" class="mb-3 border p-3 rounded d-none">
+            <h4>Aggiungi/Modifica Punto sulla Mappa</h4>
+            <form id="point-form-element">
+                <input type="hidden" id="point-id">
+                <div class="mb-2">
+                    <label for="point-name" class="form-label">Nome</label>
+                    <input type="text" class="form-control" id="point-name" required>
+                </div>
+                <div class="mb-2">
+                    <label for="point-description" class="form-label">Descrizione</label>
+                    <textarea class="form-control" id="point-description" rows="2" required></textarea>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-2">
+                            <label for="point-lat" class="form-label">Latitudine</label>
+                            <input type="number" step="any" class="form-control" id="point-lat" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-2">
+                            <label for="point-lng" class="form-label">Longitudine</label>
+                            <input type="number" step="any" class="form-control" id="point-lng" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label for="point-type" class="form-label">Tipo</label>
+                    <select class="form-control" id="point-type" required>
+                        <option value="stage">Palco</option>
+                        <option value="food">Area Food</option>
+                        <option value="toilet">Servizi</option>
+                        <option value="entrance">Ingresso</option>
+                        <option value="info">Info Point</option>
+                        <option value="other">Altro</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-info">Salva</button>
+                <button type="button" class="btn btn-secondary" id="cancel-point-btn">Annulla</button>
+            </form>
+        </div>
+        <div id="point-list" class="mt-3">
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Caricamento...</span>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const contentArea = document.getElementById('content-area');
+            const festivalInfoBtn = document.getElementById('festival-info-btn');
+            const eventsBtn = document.getElementById('events-btn');
+            const mapBtn = document.getElementById('map-btn');
+
+            // Templates
+            const festivalInfoTemplate = document.getElementById('festival-info-template').content;
+            const eventsTemplate = document.getElementById('events-template').content;
+            const mapTemplate = document.getElementById('map-template').content;
+
+            // Festival Info
+            festivalInfoBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                contentArea.innerHTML = '';
+                contentArea.appendChild(document.importNode(festivalInfoTemplate, true));
+                
+                // Carica le informazioni esistenti
+                fetchFestivalInfo();
+                
+                // Gestisci form
+                setupFestivalInfoForm();
+            });
+
+            // Eventi
+            eventsBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                contentArea.innerHTML = '';
+                contentArea.appendChild(document.importNode(eventsTemplate, true));
+                
+                // Carica eventi esistenti
+                fetchEvents();
+                
+                // Gestisci form
+                setupEventsForm();
+            });
+
+            // Mappa
+            mapBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                contentArea.innerHTML = '';
+                contentArea.appendChild(document.importNode(mapTemplate, true));
+                
+                // Carica punti mappa esistenti
+                fetchMapPoints();
+                
+                // Gestisci form
+                setupMapForm();
+            });
+
+            // Funzioni per caricare dati e gestire form
+            function fetchFestivalInfo() {
+                fetch('/admin/festival-info')
+                    .then(response => response.json())
+                    .then(data => {
+                        const infoList = document.getElementById('info-list');
+                        infoList.innerHTML = '';
+                        
+                        if (data.length === 0) {
+                            infoList.innerHTML = '<p class="text-center text-muted">Nessuna informazione disponibile. Aggiungi la prima!</p>';
+                            return;
+                        }
+                        
+                        const table = document.createElement('table');
+                        table.className = 'table table-striped';
+                        table.innerHTML = `
+                            <thead>
+                                <tr>
+                                    <th>Categoria</th>
+                                    <th>Contenuto</th>
+                                    <th>Priorità</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        `;
+                        
+                        const tbody = table.querySelector('tbody');
+                        
+                        data.forEach(info => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${info.category}</td>
+                                <td>${info.content.substring(0, 50)}${info.content.length > 50 ? '...' : ''}</td>
+                                <td>${info.priority || 0}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary edit-info" data-id="${info._id}">Modifica</button>
+                                    <button class="btn btn-sm btn-danger delete-info" data-id="${info._id}">Elimina</button>
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                        
+                        infoList.appendChild(table);
+                        
+                        // Aggiungi event listeners per edit e delete
+                        document.querySelectorAll('.edit-info').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                editFestivalInfo(this.dataset.id);
+                            });
+                        });
+                        
+                        document.querySelectorAll('.delete-info').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                deleteFestivalInfo(this.dataset.id);
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Errore nel caricamento delle informazioni:', error);
+                        document.getElementById('info-list').innerHTML = '<p class="text-danger">Errore nel caricamento delle informazioni.</p>';
+                    });
+            }
+
+            function setupFestivalInfoForm() {
+                const addBtn = document.getElementById('add-info-btn');
+                const cancelBtn = document.getElementById('cancel-info-btn');
+                const form = document.getElementById('festival-info-form');
+                const formContainer = document.getElementById('info-form');
+                
+                addBtn.addEventListener('click', function() {
+                    // Reset form
+                    form.reset();
+                    document.getElementById('info-id').value = '';
+                    formContainer.classList.remove('d-none');
+                });
+                
+                cancelBtn.addEventListener('click', function() {
+                    formContainer.classList.add('d-none');
+                });
+                
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const infoId = document.getElementById('info-id').value;
+                    const data = {
+                        category: document.getElementById('category').value,
+                        content: document.getElementById('content').value,
+                        priority: parseInt(document.getElementById('priority').value) || 0
+                    };
+                    
+                    const url = infoId ? `/admin/festival-info/${infoId}` : '/admin/festival-info';
+                    const method = infoId ? 'PUT' : 'POST';
+                    
+                    fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            formContainer.classList.add('d-none');
+                            fetchFestivalInfo();
+                        } else {
+                            alert('Errore nel salvataggio delle informazioni.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Errore:', error);
+                        alert('Errore nel salvataggio delle informazioni.');
+                    });
+                });
+            }
+
+            function editFestivalInfo(id) {
+                fetch(`/admin/festival-info/${id}`)
+                    .then(response => response.json())
+                    .then(info => {
+                        document.getElementById('info-id').value = info._id;
+                        document.getElementById('category').value = info.category;
+                        document.getElementById('content').value = info.content;
+                        document.getElementById('priority').value = info.priority || 0;
+                        
+                        document.getElementById('info-form').classList.remove('d-none');
+                    })
+                    .catch(error => {
+                        console.error('Errore nel caricamento delle informazioni per la modifica:', error);
+                        alert('Errore nel caricamento delle informazioni.');
+                    });
+            }
+
+            function deleteFestivalInfo(id) {
+                if (confirm('Sei sicuro di voler eliminare questa informazione?')) {
+                    fetch(`/admin/festival-info/${id}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            fetchFestivalInfo();
+                        } else {
+                            alert('Errore nell\'eliminazione dell\'informazione.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Errore:', error);
+                        alert('Errore nell\'eliminazione dell\'informazione.');
+                    });
+                }
+            }
+
+            // Funzioni simili per eventi e punti mappa (da implementare)
+            function fetchEvents() {
+                // Implementazione simile a fetchFestivalInfo
+                document.getElementById('event-list').innerHTML = '<p class="text-center text-muted">Funzionalità in arrivo!</p>';
+            }
+
+            function setupEventsForm() {
+                // Implementazione simile a setupFestivalInfoForm
+            }
+
+            function fetchMapPoints() {
+                // Implementazione simile a fetchFestivalInfo
+                document.getElementById('point-list').innerHTML = '<p class="text-center text-muted">Funzionalità in arrivo!</p>';
+            }
+
+            function setupMapForm() {
+                // Implementazione simile a setupFestivalInfoForm
+            }
+        });
+    </script>
+</body>
+</html> 
