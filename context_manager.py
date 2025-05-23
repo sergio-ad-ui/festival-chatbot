@@ -52,18 +52,25 @@ class ContextManager:
     
     def get_context_info(self, context_code: str) -> Optional[Dict]:
         """Recupera le informazioni di configurazione per un contesto"""
-        return self.contexts_collection.find_one({"code": context_code, "active": True})
+        print(f"🔍 DEBUG: Cercando context_info per '{context_code}'")
+        context_info = self.contexts_collection.find_one({"code": context_code, "active": True})
+        print(f"🔍 DEBUG: Risultato query context_info: {context_info}")
+        return context_info
     
     def get_context_prompt(self, context_code: str) -> str:
         """Genera il prompt di sistema per il contesto specificato"""
+        print(f"🎯 DEBUG: get_context_prompt chiamato per '{context_code}'")
         context_info = self.get_context_info(context_code)
         
         if not context_info:
+            print(f"⚠️ DEBUG: Nessun context_info trovato per '{context_code}', uso fallback")
             # Fallback per contesti non configurati
             if context_code == "festival":
+                print(f"🎪 DEBUG: Usando _get_festival_prompt() come fallback")
                 return self._get_festival_prompt()
             return "Sei un assistente virtuale. Rispondi in modo cordiale e professionale."
         
+        print(f"✅ DEBUG: Context_info trovato per '{context_code}': {context_info.get('name', 'NO_NAME')}")
         # Costruisci il prompt base dal contesto
         prompt = context_info["system_prompt"]
         
@@ -240,9 +247,17 @@ Cosa ti interessa?"""
     
     def initialize_default_contexts(self):
         """Inizializza i contesti di default se non esistono"""
+        print("🚀 DEBUG: initialize_default_contexts() chiamato")
+        
         # Controlla se esistono già contesti
-        if self.contexts_collection.count_documents({}) > 0:
+        existing_count = self.contexts_collection.count_documents({})
+        print(f"📊 DEBUG: Contesti esistenti nel database: {existing_count}")
+        
+        if existing_count > 0:
+            print("✅ DEBUG: Contesti già presenti, skip inizializzazione")
             return
+        
+        print("🏗️ DEBUG: Creazione contesti di default...")
         
         # Crea contesto Festival
         festival_context = {
@@ -268,4 +283,8 @@ Cosa ti interessa?"""
             "updated_at": datetime.now()
         }
         
-        self.contexts_collection.insert_many([festival_context, apt_brescia_context]) 
+        try:
+            result = self.contexts_collection.insert_many([festival_context, apt_brescia_context])
+            print(f"✅ DEBUG: Contesti creati con successo! IDs: {result.inserted_ids}")
+        except Exception as e:
+            print(f"❌ DEBUG: Errore nella creazione contesti: {e}") 
