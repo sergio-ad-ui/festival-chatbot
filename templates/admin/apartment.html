@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Appartamenti - ConnyUp Bot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 2rem;
+            background-color: #f8f9fa;
+        }
+        .card {
+            margin-bottom: 1.5rem;
+        }
+        .nav-tabs .nav-link {
+            border-radius: 10px 10px 0 0;
+        }
+        .nav-tabs .nav-link.active {
+            background-color: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+        .apartment-selector {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        .quick-action-btn {
+            margin: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1><i class="bi bi-house-door text-success"></i> Admin Appartamenti</h1>
+                <p class="text-muted">Gestisci le informazioni per gli ospiti degli appartamenti turistici</p>
+            </div>
+            <div>
+                <a href="/admin" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Torna alla Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Apartment Selector -->
+        <div class="apartment-selector">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h4><i class="bi bi-geo-alt"></i> Seleziona Appartamento</h4>
+                    <select class="form-select" id="apartment-selector" onchange="changeApartment()">
+                        <option value="apt_brescia">🏠 Appartamento Smeraldo - Brescia</option>
+                        <option value="apt_milano">🏢 Loft Navigli - Milano (Coming Soon)</option>
+                        <option value="apt_roma">🏛️ Casa Trastevere - Roma (Coming Soon)</option>
+                    </select>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-light btn-sm quick-action-btn" onclick="generateQR()">
+                        <i class="bi bi-qr-code"></i> QR Code
+                    </button>
+                    <button class="btn btn-light btn-sm quick-action-btn" onclick="testBot()">
+                        <i class="bi bi-chat-text"></i> Test Bot
+                    </button>
+                    <button class="btn btn-light btn-sm quick-action-btn" onclick="viewStats()">
+                        <i class="bi bi-graph-up"></i> Statistiche
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info-panel" type="button" role="tab">
+                    <i class="bi bi-info-circle"></i> Info Appartamento
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="services-tab" data-bs-toggle="tab" data-bs-target="#services-panel" type="button" role="tab">
+                    <i class="bi bi-geo"></i> Servizi Locali
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="smart-home-tab" data-bs-toggle="tab" data-bs-target="#smart-home-panel" type="button" role="tab">
+                    <i class="bi bi-house-gear"></i> Smart Home
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="conversations-tab" data-bs-toggle="tab" data-bs-target="#conversations-panel" type="button" role="tab">
+                    <i class="bi bi-chat-dots"></i> Conversazioni
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content mt-3">
+            <!-- Info Appartamento Tab -->
+            <div class="tab-pane fade show active" id="info-panel" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="bi bi-info-circle"></i> Informazioni Appartamento</h5>
+                        <button class="btn btn-success btn-sm" onclick="addApartmentInfo()">
+                            <i class="bi bi-plus"></i> Aggiungi Info
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="apartment-info-list">
+                            <div class="text-center">
+                                <div class="spinner-border text-success" role="status">
+                                    <span class="visually-hidden">Caricamento...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Servizi Locali Tab -->
+            <div class="tab-pane fade" id="services-panel" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="bi bi-geo"></i> Servizi Locali</h5>
+                        <button class="btn btn-success btn-sm" onclick="addLocalService()">
+                            <i class="bi bi-plus"></i> Aggiungi Servizio
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <!-- Service Type Filter -->
+                        <div class="mb-3">
+                            <div class="btn-group" role="group">
+                                <input type="radio" class="btn-check" name="service-filter" id="all-services" autocomplete="off" checked>
+                                <label class="btn btn-outline-success" for="all-services">Tutti</label>
+                                
+                                <input type="radio" class="btn-check" name="service-filter" id="restaurants" autocomplete="off">
+                                <label class="btn btn-outline-success" for="restaurants">Ristoranti</label>
+                                
+                                <input type="radio" class="btn-check" name="service-filter" id="supermarkets" autocomplete="off">
+                                <label class="btn btn-outline-success" for="supermarkets">Supermercati</label>
+                                
+                                <input type="radio" class="btn-check" name="service-filter" id="pharmacies" autocomplete="off">
+                                <label class="btn btn-outline-success" for="pharmacies">Farmacie</label>
+                                
+                                <input type="radio" class="btn-check" name="service-filter" id="attractions" autocomplete="off">
+                                <label class="btn btn-outline-success" for="attractions">Attrazioni</label>
+                            </div>
+                        </div>
+                        
+                        <div id="local-services-list">
+                            <div class="text-center">
+                                <div class="spinner-border text-success" role="status">
+                                    <span class="visually-hidden">Caricamento...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Smart Home Tab -->
+            <div class="tab-pane fade" id="smart-home-panel" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="bi bi-house-gear"></i> Dispositivi Smart Home</h5>
+                        <button class="btn btn-success btn-sm" onclick="addSmartDevice()">
+                            <i class="bi bi-plus"></i> Aggiungi Dispositivo
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="smart-devices-list">
+                            <div class="text-center">
+                                <div class="spinner-border text-success" role="status">
+                                    <span class="visually-hidden">Caricamento...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conversazioni Tab -->
+            <div class="tab-pane fade" id="conversations-panel" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-chat-dots"></i> Conversazioni Recenti</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="conversations-list">
+                            <div class="text-center">
+                                <div class="spinner-border text-success" role="status">
+                                    <span class="visually-hidden">Caricamento...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals for Forms -->
+    <!-- Apartment Info Modal -->
+    <div class="modal fade" id="apartmentInfoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Gestisci Informazione Appartamento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="apartment-info-form">
+                        <input type="hidden" id="info-id">
+                        <div class="mb-3">
+                            <label for="info-category" class="form-label">Categoria</label>
+                            <select class="form-select" id="info-category" required>
+                                <option value="">Seleziona categoria...</option>
+                                <option value="check_in">Check-in</option>
+                                <option value="check_out">Check-out</option>
+                                <option value="wifi">WiFi</option>
+                                <option value="regole_casa">Regole della Casa</option>
+                                <option value="servizi_inclusi">Servizi Inclusi</option>
+                                <option value="parcheggio">Parcheggio</option>
+                                <option value="emergenze">Emergenze</option>
+                                <option value="altro">Altro</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="info-content" class="form-label">Contenuto</label>
+                            <textarea class="form-control" id="info-content" rows="6" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="info-priority" class="form-label">Priorità</label>
+                            <input type="number" class="form-control" id="info-priority" value="0" min="0" max="10">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="button" class="btn btn-success" onclick="saveApartmentInfo()">Salva</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Local Service Modal -->
+    <div class="modal fade" id="localServiceModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Gestisci Servizio Locale</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="local-service-form">
+                        <input type="hidden" id="service-id">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="service-type" class="form-label">Tipo</label>
+                                    <select class="form-select" id="service-type" required>
+                                        <option value="">Seleziona tipo...</option>
+                                        <option value="restaurant">Ristorante</option>
+                                        <option value="cafe">Bar/Caffè</option>
+                                        <option value="supermarket">Supermercato</option>
+                                        <option value="pharmacy">Farmacia</option>
+                                        <option value="attraction">Attrazione</option>
+                                        <option value="transport">Trasporti</option>
+                                        <option value="other">Altro</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="service-name" class="form-label">Nome</label>
+                                    <input type="text" class="form-control" id="service-name" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="service-description" class="form-label">Descrizione</label>
+                            <textarea class="form-control" id="service-description" rows="3" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="service-address" class="form-label">Indirizzo</label>
+                                    <input type="text" class="form-control" id="service-address">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="service-distance" class="form-label">Distanza</label>
+                                    <input type="text" class="form-control" id="service-distance" placeholder="es. 5 minuti a piedi">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="service-phone" class="form-label">Telefono</label>
+                                    <input type="tel" class="form-control" id="service-phone">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="service-rating" class="form-label">Valutazione (1-5)</label>
+                                    <input type="number" class="form-control" id="service-rating" min="1" max="5" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="service-hours" class="form-label">Orari</label>
+                            <input type="text" class="form-control" id="service-hours" placeholder="es. 9:00-18:00">
+                        </div>
+                        <div class="mb-3">
+                            <label for="service-maps-url" class="form-label">Link Google Maps</label>
+                            <input type="url" class="form-control" id="service-maps-url">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="button" class="btn btn-success" onclick="saveLocalService()">Salva</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentApartment = 'apt_brescia';
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadApartmentInfo();
+            loadLocalServices();
+            loadSmartDevices();
+            loadConversations();
+        });
+
+        function changeApartment() {
+            currentApartment = document.getElementById('apartment-selector').value;
+            // Reload all data for new apartment
+            loadApartmentInfo();
+            loadLocalServices();
+            loadSmartDevices();
+            loadConversations();
+        }
+
+        function generateQR() {
+            const text = currentApartment === 'apt_brescia' ? 'APT_BRESCIA_START' : `${currentApartment.toUpperCase()}_START`;
+            const url = `https://wa.me/34644409180?text=${text}`;
+            window.open(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`, '_blank');
+        }
+
+        function testBot() {
+            const text = currentApartment === 'apt_brescia' ? 'APT_BRESCIA_START' : `${currentApartment.toUpperCase()}_START`;
+            const url = `https://wa.me/34644409180?text=${text}`;
+            window.open(url, '_blank');
+        }
+
+        function viewStats() {
+            // Future: Show apartment-specific statistics
+            alert('Statistiche specifiche per appartamento in arrivo');
+        }
+
+        // Apartment Info Functions
+        function addApartmentInfo() {
+            // Clear form
+            document.getElementById('apartment-info-form').reset();
+            document.getElementById('info-id').value = '';
+            new bootstrap.Modal(document.getElementById('apartmentInfoModal')).show();
+        }
+
+        function saveApartmentInfo() {
+            // Future: Implement save functionality
+            alert('Funzionalità in sviluppo');
+        }
+
+        function loadApartmentInfo() {
+            // Future: Load from API
+            document.getElementById('apartment-info-list').innerHTML = '<p>Caricamento informazioni apartamento...</p>';
+        }
+
+        // Local Services Functions
+        function addLocalService() {
+            document.getElementById('local-service-form').reset();
+            document.getElementById('service-id').value = '';
+            new bootstrap.Modal(document.getElementById('localServiceModal')).show();
+        }
+
+        function saveLocalService() {
+            alert('Funzionalità in sviluppo');
+        }
+
+        function loadLocalServices() {
+            document.getElementById('local-services-list').innerHTML = '<p>Caricamento servizi locali...</p>';
+        }
+
+        // Smart Home Functions
+        function addSmartDevice() {
+            alert('Form smart device in arrivo');
+        }
+
+        function loadSmartDevices() {
+            document.getElementById('smart-devices-list').innerHTML = '<p>Caricamento dispositivi smart...</p>';
+        }
+
+        // Conversations Functions
+        function loadConversations() {
+            document.getElementById('conversations-list').innerHTML = '<p>Caricamento conversazioni...</p>';
+        }
+    </script>
+</body>
+</html> 

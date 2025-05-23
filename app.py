@@ -10,6 +10,8 @@ from bson import ObjectId
 
 # Importo il modulo admin_panel
 from admin_panel import register_admin_routes
+# Importo il nuovo context manager
+from context_manager import ContextManager
 
 # Carica le variabili d'ambiente
 load_dotenv()
@@ -25,6 +27,11 @@ mongo_client = MongoClient(os.getenv("MONGODB_URI"))
 db = mongo_client[os.getenv("MONGODB_DB_NAME")]
 conversations_collection = db["conversations"]
 festival_info_collection = db["festival_info"]
+
+# Inizializza il Context Manager
+context_manager = ContextManager(db)
+# Inizializza i contesti di default se necessario
+context_manager.initialize_default_contexts()
 
 # Configurazione WhatsApp API
 # IMPORTANTE: Aggiornare il token di accesso WhatsApp nel file .env 
@@ -44,7 +51,7 @@ MAX_TOKENS = int(os.getenv("MAX_TOKENS", 500))
 
 @app.route("/", methods=["GET"])
 def index():
-    return "Chatbot del Festival attivo!"
+    return "ConnyUp Multi-Context Bot attivo! 🤖"
 
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
@@ -98,8 +105,38 @@ def handle_text_message(message):
     
     print(f"Gestione messaggio da {sender_id}: {message_text}")
     
-    # Ottieni o crea la conversazione
-    conversation = get_or_create_conversation(sender_id)
+    # Identifica il contesto del messaggio
+    context = context_manager.identify_context_from_message(message_text, sender_id)
+    
+    # Se non c'è contesto e l'utente sembra chiedere aiuto, mostra il menu
+    if not context and context_manager.should_show_context_menu(message_text):
+        menu_message = context_manager.get_context_menu()
+        send_whatsapp_message(sender_id, menu_message)
+        return
+    
+    # Se ancora non c'è contesto, usa festival come default
+    if not context:
+        context = "festival"
+    
+    # Ottieni o crea la conversazione con il contesto
+    conversation = get_or_create_conversation(sender_id, context)
+    
+    # Se è un nuovo contesto (codice di avvio), invia il messaggio di benvenuto
+    if any(code in message_text.upper() for code in context_manager.START_CODES.keys()):
+        welcome_message = context_manager.get_welcome_message(context)
+        send_whatsapp_message(sender_id, welcome_message)
+        # Aggiungi il messaggio di benvenuto alla conversazione
+        conversation["messages"].append({
+            "role": "assistant",
+            "content": welcome_message,
+            "timestamp": datetime.now()
+        })
+        # Aggiorna la conversazione nel database
+        conversations_collection.update_one(
+            {"_id": conversation["_id"]},
+            {"$set": {"messages": conversation["messages"], "last_updated": datetime.now()}}
+        )
+        return
     
     # Aggiungi il messaggio alla conversazione
     conversation["messages"].append({
@@ -108,9 +145,9 @@ def handle_text_message(message):
         "timestamp": datetime.now()
     })
     
-    # Ottieni risposta dall'AI
-    print(f"Generazione risposta AI per {sender_id}")
-    ai_response = generate_ai_response(conversation)
+    # Ottieni risposta dall'AI con il contesto appropriato
+    print(f"Generazione risposta AI per {sender_id} nel contesto {context}")
+    ai_response = generate_ai_response(conversation, context)
     print(f"Risposta AI generata: {ai_response}")
     
     # Aggiungi la risposta dell'AI alla conversazione
@@ -131,20 +168,22 @@ def handle_text_message(message):
     success = send_whatsapp_message(sender_id, ai_response)
     print(f"Risposta inviata con successo: {success}")
 
-def get_or_create_conversation(sender_id):
-    # Cerca una conversazione esistente non scaduta
+def get_or_create_conversation(sender_id, context):
+    # Cerca una conversazione esistente non scaduta per questo contesto
     expiry_time = datetime.now() - timedelta(minutes=CONVERSATION_EXPIRES_MINS)
     conversation = conversations_collection.find_one({
         "sender_id": sender_id,
+        "context": context,
         "last_updated": {"$gt": expiry_time}
     })
     
     if conversation:
         return conversation
     
-    # Crea una nuova conversazione
+    # Crea una nuova conversazione con il contesto
     new_conversation = {
         "sender_id": sender_id,
+        "context": context,
         "messages": [],
         "created_at": datetime.now(),
         "last_updated": datetime.now()
@@ -155,9 +194,9 @@ def get_or_create_conversation(sender_id):
     
     return new_conversation
 
-def generate_ai_response(conversation):
-    # Prepara il contesto con le informazioni sul festival
-    system_message = get_festival_context()
+def generate_ai_response(conversation, context):
+    # Ottieni il prompt di sistema appropriato per il contesto
+    system_message = context_manager.get_context_prompt(context)
     
     # Prepara i messaggi per l'API di OpenAI
     messages = [{"role": "system", "content": system_message}]
@@ -184,21 +223,8 @@ def generate_ai_response(conversation):
         return "Mi dispiace, si è verificato un errore. Riprova più tardi."
 
 def get_festival_context():
-    # Recupera tutte le informazioni sul festival dal database
-    festival_info = list(festival_info_collection.find())
-    
-    # Crea un contesto informativo per l'AI
-    context = "Sei un assistente virtuale per un festival. "
-    context += "Il tuo compito è fornire informazioni accurate sull'evento, aiutare con le direzioni, "
-    context += "spiegare gli orari e rispondere a domande sui servizi disponibili. "
-    context += "Ecco le informazioni sul festival:\n\n"
-    
-    # Aggiungi le informazioni specifiche dal database
-    for info in festival_info:
-        if "category" in info and "content" in info:
-            context += f"{info['category']}: {info['content']}\n"
-    
-    return context
+    # Questa funzione è mantenuta per compatibilità ma ora usa il context manager
+    return context_manager.get_context_prompt("festival")
 
 def send_whatsapp_message(recipient_id, message_text):
     payload = {
