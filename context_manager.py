@@ -193,8 +193,24 @@ class ContextManager:
     
     def _get_festival_context_additions(self) -> str:
         """Aggiunge informazioni specifiche per il festival al prompt"""
-        # Già gestito in _get_festival_prompt per compatibilità
-        return ""
+        print("🎪 DEBUG: _get_festival_context_additions() chiamato")
+        
+        festival_info = list(self.festival_info_collection.find())
+        print(f"🎪 DEBUG: Trovate {len(festival_info)} voci festival nel database")
+        
+        if len(festival_info) == 0:
+            print("❌ DEBUG: NESSUN DATO FESTIVAL TROVATO!")
+            return "\n\nNOTA: I dati specifici del festival non sono ancora stati configurati nell'admin panel."
+        
+        additions = "\n\nEcco le informazioni dettagliate sul festival:\n\n"
+        
+        for info in festival_info:
+            if "category" in info and "content" in info:
+                additions += f"{info['category']}: {info['content']}\n"
+                print(f"🎪 DEBUG: Aggiunta info - {info['category']}: {info['content'][:50]}...")
+        
+        print(f"🎪 DEBUG: Festival additions generate - lunghezza: {len(additions)} caratteri")
+        return additions
     
     def get_welcome_message(self, context_code: str) -> str:
         """Ottiene il messaggio di benvenuto per un contesto"""
