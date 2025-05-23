@@ -195,8 +195,19 @@ def get_or_create_conversation(sender_id, context):
     return new_conversation
 
 def generate_ai_response(conversation, context):
+    print(f"🤖 DEBUG APP: Inizio generazione risposta AI per contesto: {context}")
+    
     # Ottieni il prompt di sistema appropriato per il contesto
+    print(f"🤖 DEBUG APP: Chiamata context_manager.get_context_prompt('{context}')")
     system_message = context_manager.get_context_prompt(context)
+    print(f"🤖 DEBUG APP: Prompt ricevuto - lunghezza: {len(system_message)} caratteri")
+    print(f"🤖 DEBUG APP: Prompt contenuto: {system_message[:200]}...")
+    
+    # Verifica se contiene dati dell'admin
+    if "dal 15 al 18 giugno 2025" in system_message:
+        print("✅ DEBUG APP: PROMPT CONTIENE DATI DELL'ADMIN!")
+    else:
+        print("❌ DEBUG APP: PROMPT NON CONTIENE DATI DELL'ADMIN!")
     
     # Prepara i messaggi per l'API di OpenAI
     messages = [{"role": "system", "content": system_message}]
@@ -208,6 +219,8 @@ def generate_ai_response(conversation, context):
         if msg["role"] in ["user", "assistant"]:
             messages.append({"role": msg["role"], "content": msg["content"]})
     
+    print(f"🤖 DEBUG APP: Invio a OpenAI {len(messages)} messaggi")
+    
     try:
         # Chiamata all'API OpenAI aggiornata (versione 1.0+)
         response = openai_client.chat.completions.create(
@@ -217,9 +230,12 @@ def generate_ai_response(conversation, context):
             temperature=0.7
         )
         
-        return response.choices[0].message.content.strip()
+        ai_response = response.choices[0].message.content.strip()
+        print(f"🤖 DEBUG APP: Risposta OpenAI ricevuta - lunghezza: {len(ai_response)} caratteri")
+        
+        return ai_response
     except Exception as e:
-        print(f"Errore nell'API OpenAI: {e}")
+        print(f"❌ DEBUG APP: Errore nell'API OpenAI: {e}")
         return "Mi dispiace, si è verificato un errore. Riprova più tardi."
 
 def get_festival_context():
