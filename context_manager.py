@@ -77,7 +77,10 @@ class ContextManager:
     
     def _get_festival_prompt(self) -> str:
         """Genera il prompt per il contesto festival (compatibilità con il sistema esistente)"""
+        print("🎪 DEBUG: Caricamento dati festival dal database...")
+        
         festival_info = list(self.festival_info_collection.find())
+        print(f"🎪 DEBUG: Trovate {len(festival_info)} voci festival nel database")
         
         context = "Sei un assistente virtuale per il ConnyUp Festival. "
         context += "Il tuo compito è fornire informazioni accurate sull'evento, aiutare con le direzioni, "
@@ -88,6 +91,12 @@ class ContextManager:
         for info in festival_info:
             if "category" in info and "content" in info:
                 context += f"{info['category']}: {info['content']}\n"
+                print(f"🎪 DEBUG: Aggiunta info - {info['category']}: {info['content'][:50]}...")
+        
+        print(f"🎪 DEBUG: Prompt finale generato - lunghezza: {len(context)} caratteri")
+        
+        if len(festival_info) == 0:
+            print("❌ DEBUG: NESSUN DATO FESTIVAL TROVATO! Il database potrebbe essere vuoto.")
         
         return context
     
