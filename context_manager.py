@@ -95,35 +95,83 @@ class ContextManager:
         """Aggiunge informazioni specifiche per un appartamento al prompt"""
         additions = "\n\nInformazioni sull'appartamento:\n"
         
-        # Carica info appartamento
-        apartment_info = list(self.apartment_info_collection.find(
-            {"context_code": context_code}
-        ).sort("priority", 1))
+        # Carica info appartamento (senza filtro context_code per ora)
+        # TODO: In futuro possiamo aggiungere filtri per appartamento specifico
+        apartment_info = list(self.apartment_info_collection.find().sort("priority", 1))
         
-        for info in apartment_info:
-            additions += f"\n{info['category']}: {info['content']}"
+        if apartment_info:
+            for info in apartment_info:
+                if info.get('category') and info.get('content'):
+                    additions += f"\n{info['category']}: {info['content']}"
         
         # Carica servizi locali
-        services = list(self.local_services_collection.find(
-            {"context_code": context_code}
-        ))
+        services = list(self.local_services_collection.find())
         
         if services:
             additions += "\n\nServizi nelle vicinanze:"
+            
+            # Raggruppa per tipo
+            services_by_type = {}
             for service in services:
-                additions += f"\n- {service['name']} ({service['type']}): {service['description']}"
-                if service.get('distance'):
-                    additions += f" - {service['distance']}"
+                service_type = service.get('type', 'other')
+                if service_type not in services_by_type:
+                    services_by_type[service_type] = []
+                services_by_type[service_type].append(service)
+            
+            # Ordine preferito per i tipi
+            type_order = ['restaurant', 'cafe', 'supermarket', 'pharmacy', 'attraction', 'transport', 'other']
+            type_names = {
+                'restaurant': 'Ristoranti',
+                'cafe': 'Bar e Caffè', 
+                'supermarket': 'Supermercati',
+                'pharmacy': 'Farmacie',
+                'attraction': 'Attrazioni',
+                'transport': 'Trasporti',
+                'other': 'Altri Servizi'
+            }
+            
+            for service_type in type_order:
+                if service_type in services_by_type:
+                    additions += f"\n\n{type_names.get(service_type, service_type.title())}:"
+                    for service in services_by_type[service_type]:
+                        name = service.get('name', 'N/A')
+                        description = service.get('description', '')
+                        distance = service.get('distance', '')
+                        rating = service.get('rating', '')
+                        phone = service.get('phone', '')
+                        hours = service.get('hours', '')
+                        
+                        additions += f"\n• {name}"
+                        if description:
+                            additions += f" - {description}"
+                        if distance:
+                            additions += f" ({distance})"
+                        if rating:
+                            additions += f" ⭐ {rating}/5"
+                        if phone:
+                            additions += f" Tel: {phone}"
+                        if hours:
+                            additions += f" Orari: {hours}"
         
         # Carica istruzioni smart home
-        smart_instructions = list(self.smart_home_collection.find(
-            {"context_code": context_code}
-        ))
+        smart_instructions = list(self.smart_home_collection.find())
         
         if smart_instructions:
-            additions += "\n\nDispositivi smart nell'appartamento:"
+            additions += "\n\nDispositivi smart e istruzioni:"
             for instruction in smart_instructions:
-                additions += f"\n- {instruction['device']}: {instruction['instructions']}"
+                device = instruction.get('device', 'Dispositivo')
+                instructions = instruction.get('instructions', '')
+                device_type = instruction.get('device_type', '')
+                
+                additions += f"\n• {device}"
+                if device_type:
+                    additions += f" ({device_type})"
+                if instructions:
+                    additions += f": {instructions}"
+        
+        # Se non ci sono dati, restituisci un prompt base
+        if not apartment_info and not services and not smart_instructions:
+            additions = "\n\nNOTA: I dati specifici dell'appartamento non sono ancora stati configurati nell'admin panel."
         
         return additions
     

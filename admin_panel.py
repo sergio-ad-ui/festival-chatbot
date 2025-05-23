@@ -97,6 +97,10 @@ def apartment_info_api():
         data['created_at'] = datetime.now()
         data['updated_at'] = datetime.now()
         
+        # Aggiungi context_code automaticamente se non presente
+        if 'context_code' not in data:
+            data['context_code'] = 'apt_brescia'  # Default per ora
+        
         if '_id' in data:
             # Aggiornamento
             info_id = data.pop('_id')
@@ -131,6 +135,10 @@ def local_services_api():
         data = request.json
         data['created_at'] = datetime.now()
         data['updated_at'] = datetime.now()
+        
+        # Aggiungi context_code automaticamente se non presente
+        if 'context_code' not in data:
+            data['context_code'] = 'apt_brescia'  # Default per ora
         
         if '_id' in data:
             service_id = data.pop('_id')
@@ -169,6 +177,10 @@ def smart_home_api():
         data = request.json
         data['created_at'] = datetime.now()
         data['updated_at'] = datetime.now()
+        
+        # Aggiungi context_code automaticamente se non presente
+        if 'context_code' not in data:
+            data['context_code'] = 'apt_brescia'  # Default per ora
         
         if '_id' in data:
             device_id = data.pop('_id')
