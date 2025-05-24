@@ -35,6 +35,14 @@ class ContextManager:
         """
         # Controlla se il messaggio contiene un codice di avvio
         message_upper = message.upper().strip()
+        
+        # Comando speciale per reset conversazione
+        if message_upper in ["RESET", "RIAVVIA", "RESTART", "NUOVO"]:
+            # Elimina la conversazione esistente
+            self.db["conversations"].delete_many({"sender_id": sender_id})
+            print(f"🔄 RESET: Conversazione eliminata per utente {sender_id}")
+            return None  # Forza una nuova conversazione
+        
         for code, context in self.START_CODES.items():
             if code in message_upper:
                 return context
@@ -202,12 +210,20 @@ class ContextManager:
             print("❌ DEBUG: NESSUN DATO FESTIVAL TROVATO!")
             return "\n\nNOTA: I dati specifici del festival non sono ancora stati configurati nell'admin panel."
         
-        additions = "\n\nEcco le informazioni dettagliate sul festival:\n\n"
+        from datetime import datetime
+        now = datetime.now().strftime("%d/%m/%Y %H:%M")
+        
+        additions = f"\n\n=== INFORMAZIONI UFFICIALI AGGIORNATE ({now}) ===\n"
+        additions += "⚠️ IMPORTANTE: Queste sono le informazioni PIÙ RECENTI. Ignora qualsiasi informazione precedente su date/orari.\n"
+        additions += "📋 Dati ufficiali da utilizzare SEMPRE:\n\n"
         
         for info in festival_info:
             if "category" in info and "content" in info:
-                additions += f"{info['category']}: {info['content']}\n"
+                additions += f"• {info['category'].upper()}: {info['content']}\n"
                 print(f"🎪 DEBUG: Aggiunta info - {info['category']}: {info['content'][:50]}...")
+        
+        additions += f"\n🔄 Ultimo aggiornamento: {now}"
+        additions += "\n❗ Se l'utente chiede orari/date, rispondi SEMPRE e SOLO con questi dati ufficiali."
         
         print(f"🎪 DEBUG: Festival additions generate - lunghezza: {len(additions)} caratteri")
         return additions

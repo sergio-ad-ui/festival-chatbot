@@ -109,11 +109,15 @@ def apartment_info_api():
                 {'_id': ObjectId(info_id)},
                 {'$set': data}
             )
-            return jsonify({'success': True, 'message': 'Informazione aggiornata'})
+            # Reset conversazioni appartamenti quando dati aggiornati
+            reset_count = reset_active_conversations(db, "apt_brescia")
+            return jsonify({'success': True, 'message': f'Informazione aggiornata. Reset {reset_count} conversazioni.'})
         else:
             # Nuova informazione
             result = apartment_info_collection.insert_one(data)
-            return jsonify({'success': True, 'id': str(result.inserted_id), 'message': 'Informazione aggiunta'})
+            # Reset conversazioni appartamenti per nuovi dati
+            reset_count = reset_active_conversations(db, "apt_brescia")
+            return jsonify({'success': True, 'id': str(result.inserted_id), 'message': f'Informazione aggiunta. Reset {reset_count} conversazioni.'})
     
     # GET - Restituisci tutte le informazioni
     apartment_info = list(apartment_info_collection.find())
@@ -243,10 +247,14 @@ def festival_info():
                 {'_id': ObjectId(info_id)},
                 {'$set': data}
             )
-            return jsonify({'success': True, 'message': 'Informazione aggiornata'})
+            # Reset conversazioni festival quando dati aggiornati
+            reset_count = reset_active_conversations(db, "festival")
+            return jsonify({'success': True, 'message': f'Informazione aggiornata. Reset {reset_count} conversazioni.'})
         else:
             result = festival_info_collection.insert_one(data)
-            return jsonify({'success': True, 'id': str(result.inserted_id), 'message': 'Informazione aggiunta'})
+            # Reset conversazioni festival per nuovi dati
+            reset_count = reset_active_conversations(db, "festival")
+            return jsonify({'success': True, 'id': str(result.inserted_id), 'message': f'Informazione aggiunta. Reset {reset_count} conversazioni.'})
     
     festival_info = list(festival_info_collection.find())
     for info in festival_info:
@@ -312,6 +320,21 @@ def map():
 def delete_map_point(point_id):
     map_points_collection.delete_one({'_id': ObjectId(point_id)})
     return jsonify({'success': True, 'message': 'Punto mappa eliminato'})
+
+def reset_active_conversations(db, context_type=None):
+    """Reset delle conversazioni attive quando i dati vengono aggiornati"""
+    try:
+        query = {}
+        if context_type:
+            query["context"] = context_type
+        
+        # Elimina tutte le conversazioni attive (o di un contesto specifico)
+        result = db["conversations"].delete_many(query)
+        print(f"🔄 RESET: Eliminate {result.deleted_count} conversazioni attive")
+        return result.deleted_count
+    except Exception as e:
+        print(f"❌ Errore nel reset conversazioni: {e}")
+        return 0
 
 # Registra il blueprint nell'app principale
 def register_admin_routes(app):

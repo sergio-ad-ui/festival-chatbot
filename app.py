@@ -45,8 +45,8 @@ WHATSAPP_HEADERS = {
     "Content-Type": "application/json"
 }
 
-# Durata massima di una conversazione in minuti
-CONVERSATION_EXPIRES_MINS = int(os.getenv("CONVERSATION_EXPIRES_MINS", 60))
+# Durata massima di una conversazione in minuti (ridotta per informazioni aggiornate)
+CONVERSATION_EXPIRES_MINS = int(os.getenv("CONVERSATION_EXPIRES_MINS", 30))
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", 500))
 
 @app.route("/", methods=["GET"])
