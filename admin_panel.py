@@ -278,10 +278,14 @@ def events():
                 {'_id': ObjectId(event_id)},
                 {'$set': data}
             )
-            return jsonify({'success': True, 'message': 'Evento aggiornato'})
+            # Reset conversazioni festival quando eventi aggiornati
+            reset_count = reset_active_conversations(db, "festival")
+            return jsonify({'success': True, 'message': f'Evento aggiornato. Reset {reset_count} conversazioni.'})
         else:
             result = events_collection.insert_one(data)
-            return jsonify({'success': True, 'id': str(result.inserted_id), 'message': 'Evento aggiunto'})
+            # Reset conversazioni festival per nuovi eventi
+            reset_count = reset_active_conversations(db, "festival")
+            return jsonify({'success': True, 'id': str(result.inserted_id), 'message': f'Evento aggiunto. Reset {reset_count} conversazioni.'})
     
     events = list(events_collection.find())
     for event in events:
@@ -292,7 +296,9 @@ def events():
 @admin_bp.route('/events/<event_id>', methods=['DELETE'])
 def delete_event(event_id):
     events_collection.delete_one({'_id': ObjectId(event_id)})
-    return jsonify({'success': True, 'message': 'Evento eliminato'})
+    # Reset conversazioni festival quando evento eliminato
+    reset_count = reset_active_conversations(db, "festival")
+    return jsonify({'success': True, 'message': f'Evento eliminato. Reset {reset_count} conversazioni.'})
 
 @admin_bp.route('/map', methods=['GET', 'POST'])
 def map():
@@ -305,10 +311,14 @@ def map():
                 {'_id': ObjectId(point_id)},
                 {'$set': data}
             )
-            return jsonify({'success': True, 'message': 'Punto mappa aggiornato'})
+            # Reset conversazioni festival quando mappa aggiornata
+            reset_count = reset_active_conversations(db, "festival")
+            return jsonify({'success': True, 'message': f'Punto mappa aggiornato. Reset {reset_count} conversazioni.'})
         else:
             result = map_points_collection.insert_one(data)
-            return jsonify({'success': True, 'id': str(result.inserted_id), 'message': 'Punto mappa aggiunto'})
+            # Reset conversazioni festival per nuovi punti mappa
+            reset_count = reset_active_conversations(db, "festival")
+            return jsonify({'success': True, 'id': str(result.inserted_id), 'message': f'Punto mappa aggiunto. Reset {reset_count} conversazioni.'})
     
     map_points = list(map_points_collection.find())
     for point in map_points:
@@ -319,7 +329,9 @@ def map():
 @admin_bp.route('/map/<point_id>', methods=['DELETE'])
 def delete_map_point(point_id):
     map_points_collection.delete_one({'_id': ObjectId(point_id)})
-    return jsonify({'success': True, 'message': 'Punto mappa eliminato'})
+    # Reset conversazioni festival quando punto mappa eliminato
+    reset_count = reset_active_conversations(db, "festival")
+    return jsonify({'success': True, 'message': f'Punto mappa eliminato. Reset {reset_count} conversazioni.'})
 
 def reset_active_conversations(db, context_type=None):
     """Reset soft delle conversazioni: mantiene contesto ma elimina messaggi"""

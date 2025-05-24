@@ -214,10 +214,19 @@ class ContextManager:
         """Aggiunge informazioni specifiche per il festival al prompt"""
         print("🎪 DEBUG: _get_festival_context_additions() chiamato")
         
+        # Carica informazioni generali festival
         festival_info = list(self.festival_info_collection.find())
         print(f"🎪 DEBUG: Trovate {len(festival_info)} voci festival nel database")
         
-        if len(festival_info) == 0:
+        # Carica eventi
+        events = list(self.db["events"].find())
+        print(f"🎪 DEBUG: Trovati {len(events)} eventi nel database")
+        
+        # Carica punti mappa
+        map_points = list(self.db["map_points"].find())
+        print(f"🎪 DEBUG: Trovati {len(map_points)} punti mappa nel database")
+        
+        if len(festival_info) == 0 and len(events) == 0 and len(map_points) == 0:
             print("❌ DEBUG: NESSUN DATO FESTIVAL TROVATO!")
             return "\n\nNOTA: I dati specifici del festival non sono ancora stati configurati nell'admin panel."
         
@@ -228,15 +237,48 @@ class ContextManager:
         additions += "⚠️ IMPORTANTE: Queste sono le informazioni PIÙ RECENTI. Ignora qualsiasi informazione precedente su date/orari.\n"
         additions += "📋 Dati ufficiali da utilizzare SEMPRE:\n\n"
         
-        for info in festival_info:
-            if "category" in info and "content" in info:
-                additions += f"• {info['category'].upper()}: {info['content']}\n"
-                print(f"🎪 DEBUG: Aggiunta info - {info['category']}: {info['content'][:50]}...")
+        # Aggiungi informazioni generali
+        if festival_info:
+            additions += "🎪 INFORMAZIONI GENERALI:\n"
+            for info in festival_info:
+                if "category" in info and "content" in info:
+                    additions += f"• {info['category'].upper()}: {info['content']}\n"
+                    print(f"🎪 DEBUG: Aggiunta info - {info['category']}: {info['content'][:50]}...")
+        
+        # Aggiungi eventi
+        if events:
+            additions += "\n🎵 PROGRAMMA EVENTI:\n"
+            for event in events:
+                if "name" in event:
+                    additions += f"• {event['name']}"
+                    if event.get('start_time'):
+                        additions += f" - {event['start_time']}"
+                    if event.get('end_time'):
+                        additions += f" fino {event['end_time']}"
+                    if event.get('location'):
+                        additions += f" @ {event['location']}"
+                    if event.get('description'):
+                        additions += f": {event['description']}"
+                    additions += "\n"
+                    print(f"🎪 DEBUG: Aggiunto evento - {event['name']}")
+        
+        # Aggiungi punti mappa
+        if map_points:
+            additions += "\n🗺️ PUNTI DI INTERESSE:\n"
+            for point in map_points:
+                if "name" in point:
+                    additions += f"• {point['name']}"
+                    if point.get('type'):
+                        additions += f" ({point['type']})"
+                    if point.get('description'):
+                        additions += f": {point['description']}"
+                    additions += "\n"
+                    print(f"🎪 DEBUG: Aggiunto punto mappa - {point['name']}")
         
         additions += f"\n🔄 Ultimo aggiornamento: {now}"
-        additions += "\n❗ Se l'utente chiede orari/date, rispondi SEMPRE e SOLO con questi dati ufficiali."
+        additions += "\n❗ Se l'utente chiede orari/date/eventi/luoghi, rispondi SEMPRE e SOLO con questi dati ufficiali."
         
-        print(f"🎪 DEBUG: Festival additions generate - lunghezza: {len(additions)} caratteri")
+        print(f"🎪 DEBUG: Festival additions complete - lunghezza: {len(additions)} caratteri")
         return additions
     
     def get_welcome_message(self, context_code: str) -> str:
