@@ -322,16 +322,24 @@ def delete_map_point(point_id):
     return jsonify({'success': True, 'message': 'Punto mappa eliminato'})
 
 def reset_active_conversations(db, context_type=None):
-    """Reset delle conversazioni attive quando i dati vengono aggiornati"""
+    """Reset soft delle conversazioni: mantiene contesto ma elimina messaggi"""
     try:
         query = {}
         if context_type:
             query["context"] = context_type
         
-        # Elimina tutte le conversazioni attive (o di un contesto specifico)
-        result = db["conversations"].delete_many(query)
-        print(f"🔄 RESET: Eliminate {result.deleted_count} conversazioni attive")
-        return result.deleted_count
+        # Reset SOFT: mantieni conversazione ma svuota messaggi e resetta timestamp
+        update_data = {
+            "$set": {
+                "messages": [],
+                "last_updated": datetime.now(),
+                "reset_reason": "admin_data_update"
+            }
+        }
+        
+        result = db["conversations"].update_many(query, update_data)
+        print(f"🔄 RESET SOFT: Aggiornate {result.modified_count} conversazioni (messaggi eliminati, contesto mantenuto)")
+        return result.modified_count
     except Exception as e:
         print(f"❌ Errore nel reset conversazioni: {e}")
         return 0

@@ -107,16 +107,13 @@ def handle_text_message(message):
     
     # Identifica il contesto del messaggio
     context = context_manager.identify_context_from_message(message_text, sender_id)
+    print(f"🎯 DEBUG APP: Contesto identificato: '{context}'")
     
     # Se non c'è contesto e l'utente sembra chiedere aiuto, mostra il menu
     if not context and context_manager.should_show_context_menu(message_text):
         menu_message = context_manager.get_context_menu()
         send_whatsapp_message(sender_id, menu_message)
         return
-    
-    # Se ancora non c'è contesto, usa festival come default
-    if not context:
-        context = "festival"
     
     # Ottieni o crea la conversazione con il contesto
     conversation = get_or_create_conversation(sender_id, context)

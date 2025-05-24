@@ -38,11 +38,20 @@ class ContextManager:
         
         # Comando speciale per reset conversazione
         if message_upper in ["RESET", "RIAVVIA", "RESTART", "NUOVO"]:
-            # Elimina la conversazione esistente
-            self.db["conversations"].delete_many({"sender_id": sender_id})
-            print(f"🔄 RESET: Conversazione eliminata per utente {sender_id}")
-            return None  # Forza una nuova conversazione
+            # Reset SOFT: svuota messaggi ma mantieni contesto
+            existing_conv = self.db["conversations"].find_one({"sender_id": sender_id})
+            if existing_conv:
+                self.db["conversations"].update_one(
+                    {"sender_id": sender_id},
+                    {"$set": {"messages": [], "last_updated": datetime.now()}}
+                )
+                print(f"🔄 RESET: Messaggi eliminati per utente {sender_id}, contesto mantenuto")
+                return existing_conv.get("context", "festival")  # Mantieni contesto esistente
+            else:
+                print(f"🔄 RESET: Nessuna conversazione esistente per {sender_id}")
+                return "festival"  # Default sicuro
         
+        # Controlla codici di avvio espliciti
         for code, context in self.START_CODES.items():
             if code in message_upper:
                 return context
@@ -53,10 +62,12 @@ class ContextManager:
         }, sort=[("last_updated", -1)])
         
         if conversation and "context" in conversation:
+            print(f"🔍 DEBUG: Contesto trovato da conversazione esistente: {conversation['context']}")
             return conversation["context"]
         
-        # Default al festival se non si trova nulla
-        return None
+        # Default esplicito al festival
+        print(f"🔍 DEBUG: Nessuna conversazione trovata per {sender_id}, uso default 'festival'")
+        return "festival"  # Sempre festival come default, mai None
     
     def get_context_info(self, context_code: str) -> Optional[Dict]:
         """Recupera le informazioni di configurazione per un contesto"""
