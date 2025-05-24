@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Immagini - ConnyUp Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .image-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        .image-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .image-preview {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        .upload-area {
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            transition: background-color 0.3s;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            background-color: #f8f9fa;
+        }
+        .upload-area.dragover {
+            background-color: #e3f2fd;
+            border-color: #1976d2;
+        }
+        .context-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/admin">
+                <i class="fas fa-cog me-2"></i>ConnyUp Admin
+            </a>
+            <div class="d-flex">
+                <a href="/admin/festival" class="btn btn-outline-light me-2">Festival</a>
+                <a href="/admin/apartment" class="btn btn-outline-light me-2">Appartamenti</a>
+                <a href="/admin" class="btn btn-outline-light">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1><i class="fas fa-images me-2"></i>Gestione Immagini</h1>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        <i class="fas fa-plus me-2"></i>Carica Immagine
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiche -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">Totale Immagini</h6>
+                                <h3 id="totalImages">0</h3>
+                            </div>
+                            <i class="fas fa-images fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">Festival</h6>
+                                <h3 id="festivalImages">0</h3>
+                            </div>
+                            <i class="fas fa-music fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">Appartamenti</h6>
+                                <h3 id="apartmentImages">0</h3>
+                            </div>
+                            <i class="fas fa-home fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">Spazio Usato</h6>
+                                <h3 id="usedSpace">0 MB</h3>
+                            </div>
+                            <i class="fas fa-hdd fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtri -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <label class="form-label">Filtra per Contesto:</label>
+                        <select class="form-select" id="contextFilter">
+                            <option value="all">Tutti i contesti</option>
+                            <option value="festival">Festival</option>
+                            <option value="apartment">Appartamenti</option>
+                            <option value="general">Generale</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Griglia Immagini -->
+        <div class="row" id="imagesGrid">
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Caricamento...</span>
+                </div>
+                <p class="mt-2">Caricamento immagini...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Upload -->
+    <div class="modal fade" id="uploadModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-upload me-2"></i>Carica Nuova Immagine</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="upload-area mb-3" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                            <h5>Trascina un'immagine qui o clicca per selezionare</h5>
+                            <p class="text-muted">JPG, PNG, GIF fino a 10MB</p>
+                            <input type="file" id="imageFile" name="image" accept="image/*" style="display: none;">
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Titolo Immagine:</label>
+                                <input type="text" class="form-control" id="imageTitle" name="title" placeholder="Es. Mappa Festival 2025">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Contesto:</label>
+                                <select class="form-select" id="imageContext" name="context">
+                                    <option value="general">Generale</option>
+                                    <option value="festival">Festival</option>
+                                    <option value="apartment">Appartamenti</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="uploadPreview" class="mt-3" style="display: none;">
+                            <img id="previewImage" class="img-fluid rounded" style="max-height: 300px;">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="button" class="btn btn-primary" id="uploadBtn">
+                        <i class="fas fa-upload me-2"></i>Carica Immagine
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Visualizzazione -->
+    <div class="modal fade" id="viewModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewModalTitle">Visualizza Immagine</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="viewModalImage" class="img-fluid rounded">
+                    <div class="mt-3">
+                        <p id="viewModalInfo" class="text-muted"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" id="deleteImageBtn">
+                        <i class="fas fa-trash me-2"></i>Elimina
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentImages = [];
+        let currentImageId = null;
+
+        // Carica immagini al caricamento pagina
+        document.addEventListener('DOMContentLoaded', function() {
+            loadImages();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Upload area drag & drop
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('imageFile');
+
+            uploadArea.addEventListener('click', () => fileInput.click());
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    handleFileSelect(files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileSelect(e.target.files[0]);
+                }
+            });
+
+            // Upload button
+            document.getElementById('uploadBtn').addEventListener('click', uploadImage);
+
+            // Context filter
+            document.getElementById('contextFilter').addEventListener('change', (e) => {
+                loadImages(e.target.value);
+            });
+
+            // Delete button
+            document.getElementById('deleteImageBtn').addEventListener('click', deleteCurrentImage);
+        }
+
+        function handleFileSelect(file) {
+            if (!file.type.startsWith('image/')) {
+                showNotification('Seleziona un file immagine valido', 'error');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                showNotification('Il file è troppo grande (max 10MB)', 'error');
+                return;
+            }
+
+            // Mostra preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('previewImage').src = e.target.result;
+                document.getElementById('uploadPreview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            // Auto-genera titolo dal filename
+            if (!document.getElementById('imageTitle').value) {
+                document.getElementById('imageTitle').value = file.name.split('.')[0];
+            }
+        }
+
+        async function uploadImage() {
+            const fileInput = document.getElementById('imageFile');
+            const title = document.getElementById('imageTitle').value;
+            const context = document.getElementById('imageContext').value;
+
+            if (!fileInput.files.length) {
+                showNotification('Seleziona un\'immagine da caricare', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            formData.append('title', title);
+            formData.append('context', context);
+
+            try {
+                document.getElementById('uploadBtn').disabled = true;
+                document.getElementById('uploadBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Caricamento...';
+
+                const response = await fetch('/admin/api/upload-image', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification('Immagine caricata con successo!', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+                    resetUploadForm();
+                    loadImages();
+                } else {
+                    showNotification(result.error || 'Errore durante il caricamento', 'error');
+                }
+            } catch (error) {
+                console.error('Errore upload:', error);
+                showNotification('Errore di connessione', 'error');
+            } finally {
+                document.getElementById('uploadBtn').disabled = false;
+                document.getElementById('uploadBtn').innerHTML = '<i class="fas fa-upload me-2"></i>Carica Immagine';
+            }
+        }
+
+        async function loadImages(context = 'all') {
+            try {
+                const url = context === 'all' ? '/admin/api/images' : `/admin/api/images?context=${context}`;
+                const response = await fetch(url);
+                const images = await response.json();
+
+                currentImages = images;
+                renderImages(images);
+                updateStats(images);
+            } catch (error) {
+                console.error('Errore caricamento immagini:', error);
+                showNotification('Errore caricamento immagini', 'error');
+            }
+        }
+
+        function renderImages(images) {
+            const grid = document.getElementById('imagesGrid');
+            
+            if (images.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Nessuna immagine trovata</h5>
+                        <p class="text-muted">Carica la tua prima immagine!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = images.map(image => `
+                <div class="col-md-4 col-lg-3 mb-4">
+                    <div class="image-card">
+                        <div class="position-relative">
+                            <img src="${image.thumbnail_url}" alt="${image.title}" class="image-preview" 
+                                 onclick="viewImage('${image._id}')">
+                            <span class="badge bg-primary context-badge">${getContextLabel(image.context)}</span>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="card-title">${image.title || 'Senza titolo'}</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                ${new Date(image.created_at).toLocaleDateString('it-IT')}
+                            </small><br>
+                            <small class="text-muted">
+                                <i class="fas fa-expand-arrows-alt me-1"></i>
+                                ${image.width}x${image.height}px
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            grid.innerHTML = html;
+        }
+
+        function getContextLabel(context) {
+            const labels = {
+                'festival': 'Festival',
+                'apartment': 'Appartamenti',
+                'general': 'Generale'
+            };
+            return labels[context] || context;
+        }
+
+        function viewImage(imageId) {
+            const image = currentImages.find(img => img._id === imageId);
+            if (!image) return;
+
+            currentImageId = imageId;
+            
+            document.getElementById('viewModalTitle').textContent = image.title || 'Immagine';
+            document.getElementById('viewModalImage').src = image.url;
+            document.getElementById('viewModalInfo').innerHTML = `
+                <strong>Contesto:</strong> ${getContextLabel(image.context)} | 
+                <strong>Dimensioni:</strong> ${image.width}x${image.height}px | 
+                <strong>Formato:</strong> ${image.format} | 
+                <strong>Dimensione:</strong> ${(image.bytes / 1024).toFixed(1)} KB
+            `;
+
+            new bootstrap.Modal(document.getElementById('viewModal')).show();
+        }
+
+        async function deleteCurrentImage() {
+            if (!currentImageId) return;
+
+            if (!confirm('Sei sicuro di voler eliminare questa immagine?')) return;
+
+            try {
+                const response = await fetch(`/admin/api/images/${currentImageId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification('Immagine eliminata con successo', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('viewModal')).hide();
+                    loadImages();
+                } else {
+                    showNotification(result.error || 'Errore durante l\'eliminazione', 'error');
+                }
+            } catch (error) {
+                console.error('Errore eliminazione:', error);
+                showNotification('Errore di connessione', 'error');
+            }
+        }
+
+        function updateStats(images) {
+            document.getElementById('totalImages').textContent = images.length;
+            document.getElementById('festivalImages').textContent = images.filter(img => img.context === 'festival').length;
+            document.getElementById('apartmentImages').textContent = images.filter(img => img.context === 'apartment').length;
+            
+            const totalBytes = images.reduce((sum, img) => sum + (img.bytes || 0), 0);
+            document.getElementById('usedSpace').textContent = (totalBytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function resetUploadForm() {
+            document.getElementById('uploadForm').reset();
+            document.getElementById('uploadPreview').style.display = 'none';
+        }
+
+        function showNotification(message, type = 'info') {
+            // Implementazione semplificata
+            const alertClass = type === 'error' ? 'alert-danger' : type === 'success' ? 'alert-success' : 'alert-info';
+            const html = `
+                <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+                     style="top: 20px; right: 20px; z-index: 9999;" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+            
+            // Auto-remove dopo 5 secondi
+            setTimeout(() => {
+                const alert = document.querySelector('.alert.position-fixed');
+                if (alert) alert.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html> 

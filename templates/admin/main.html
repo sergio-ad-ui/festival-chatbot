@@ -185,9 +185,9 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5><i class="bi bi-gear"></i> Impostazioni</h5>
-                        <p class="text-muted">Configura il sistema globale</p>
-                        <button class="btn btn-outline-secondary" onclick="openSettings()">Configura</button>
+                        <h5><i class="bi bi-images"></i> Gestione Immagini</h5>
+                        <p class="text-muted">Carica e gestisci immagini per il bot</p>
+                        <button class="btn btn-outline-primary" onclick="openImages()">Gestisci</button>
                     </div>
                 </div>
             </div>
@@ -222,8 +222,8 @@
             window.location.href = '/admin/export';
         }
 
-        function openSettings() {
-            window.location.href = '/admin/settings';
+        function openImages() {
+            window.location.href = '/admin/images';
         }
 
         async function loadGlobalStats() {

@@ -12,6 +12,8 @@ from bson import ObjectId
 from admin_panel import register_admin_routes
 # Importo il nuovo context manager
 from context_manager import ContextManager
+# Importo il servizio Cloudinary
+from cloudinary_service import cloudinary_service
 
 # Carica le variabili d'ambiente
 load_dotenv()
@@ -266,6 +268,71 @@ def send_whatsapp_message(recipient_id, message_text):
     except Exception as e:
         print(f"Errore nell'invio del messaggio WhatsApp: {e}")
         return False
+
+def send_whatsapp_image(recipient_id, image_url, caption=""):
+    """
+    Invia un'immagine via WhatsApp
+    
+    Args:
+        recipient_id: ID del destinatario
+        image_url: URL dell'immagine
+        caption: Didascalia opzionale
+    """
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": recipient_id,
+        "type": "image",
+        "image": {
+            "link": image_url,
+            "caption": caption
+        }
+    }
+    
+    try:
+        print(f"📸 Invio immagine WhatsApp: {image_url}")
+        print(f"Caption: {caption}")
+        
+        response = requests.post(
+            WHATSAPP_API_URL,
+            headers=WHATSAPP_HEADERS,
+            json=payload
+        )
+        
+        print(f"Risposta API WhatsApp (immagine): Status {response.status_code}")
+        print(f"Risposta API WhatsApp (immagine): Body {response.text}")
+        
+        response.raise_for_status()
+        return True
+    except Exception as e:
+        print(f"❌ Errore nell'invio dell'immagine WhatsApp: {e}")
+        return False
+
+def send_whatsapp_message_with_image(recipient_id, message_text, image_public_id=None, image_caption=""):
+    """
+    Invia un messaggio con opzionale immagine da Cloudinary
+    
+    Args:
+        recipient_id: ID del destinatario
+        message_text: Testo del messaggio
+        image_public_id: ID pubblico dell'immagine su Cloudinary (opzionale)
+        image_caption: Didascalia dell'immagine (opzionale)
+    """
+    success = True
+    
+    # Invia prima il testo
+    if message_text:
+        success = send_whatsapp_message(recipient_id, message_text)
+    
+    # Poi invia l'immagine se presente
+    if image_public_id and success:
+        image_url = cloudinary_service.get_optimized_url(image_public_id, width=800, height=600)
+        if image_url:
+            success = send_whatsapp_image(recipient_id, image_url, image_caption)
+        else:
+            print(f"❌ Impossibile ottenere URL per immagine: {image_public_id}")
+            success = False
+    
+    return success
 
 # Registra le route del pannello di amministrazione
 register_admin_routes(app)

@@ -5,6 +5,9 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
+# Importo il servizio Cloudinary
+from cloudinary_service import cloudinary_service
+
 # Carica le variabili d'ambiente
 load_dotenv()
 
@@ -44,6 +47,11 @@ def festival_admin():
 def apartment_admin():
     """Admin specifico per il contesto Appartamenti"""
     return render_template('admin/apartment.html')
+
+@admin_bp.route('/images')
+def images_admin():
+    """Admin per gestione immagini Cloudinary"""
+    return render_template('admin/images.html')
 
 # ================================
 # API STATISTICHE GLOBALI
@@ -341,6 +349,136 @@ def delete_map_point(point_id):
     # Reset conversazioni festival quando punto mappa eliminato
     reset_count = reset_active_conversations(db, "festival")
     return jsonify({'success': True, 'message': f'Punto mappa eliminato. Reset {reset_count} conversazioni.'})
+
+# ================================
+# API CLOUDINARY - GESTIONE IMMAGINI
+# ================================
+
+@admin_bp.route('/api/upload-image', methods=['POST'])
+def upload_image():
+    """Upload di un'immagine su Cloudinary"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'Nessun file immagine fornito'}), 400
+        
+        file = request.files['image']
+        context = request.form.get('context', 'general')  # festival, apartment, general
+        title = request.form.get('title', '')
+        
+        if file.filename == '':
+            return jsonify({'error': 'Nessun file selezionato'}), 400
+        
+        # Upload su Cloudinary
+        result = cloudinary_service.upload_image(file, context=context)
+        
+        if result:
+            # Salva informazioni nel database per gestione
+            image_data = {
+                'public_id': result['public_id'],
+                'url': result['url'],
+                'title': title,
+                'context': context,
+                'width': result.get('width'),
+                'height': result.get('height'),
+                'format': result.get('format'),
+                'bytes': result.get('bytes'),
+                'created_at': datetime.now(),
+                'updated_at': datetime.now()
+            }
+            
+            # Salva in collezione immagini
+            images_collection = db["images"]
+            db_result = images_collection.insert_one(image_data)
+            image_data['_id'] = str(db_result.inserted_id)
+            
+            return jsonify({
+                'success': True,
+                'image': image_data,
+                'message': 'Immagine caricata con successo'
+            })
+        else:
+            return jsonify({'error': 'Errore durante l\'upload su Cloudinary'}), 500
+            
+    except Exception as e:
+        print(f"❌ Errore upload immagine: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/api/images', methods=['GET'])
+def list_images():
+    """Lista immagini caricate"""
+    try:
+        context = request.args.get('context', 'all')
+        
+        query = {}
+        if context != 'all':
+            query['context'] = context
+        
+        images_collection = db["images"]
+        images = list(images_collection.find(query).sort('created_at', -1))
+        
+        for image in images:
+            image['_id'] = str(image['_id'])
+            # Aggiungi URL ottimizzato per preview
+            image['thumbnail_url'] = cloudinary_service.get_optimized_url(
+                image['public_id'], width=300, height=200
+            )
+        
+        return jsonify(images)
+        
+    except Exception as e:
+        print(f"❌ Errore listing immagini: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/api/images/<image_id>', methods=['DELETE'])
+def delete_image(image_id):
+    """Elimina un'immagine"""
+    try:
+        images_collection = db["images"]
+        image = images_collection.find_one({'_id': ObjectId(image_id)})
+        
+        if not image:
+            return jsonify({'error': 'Immagine non trovata'}), 404
+        
+        # Elimina da Cloudinary
+        deleted = cloudinary_service.delete_image(image['public_id'])
+        
+        if deleted:
+            # Elimina dal database
+            images_collection.delete_one({'_id': ObjectId(image_id)})
+            return jsonify({'success': True, 'message': 'Immagine eliminata'})
+        else:
+            return jsonify({'error': 'Errore durante l\'eliminazione da Cloudinary'}), 500
+            
+    except Exception as e:
+        print(f"❌ Errore eliminazione immagine: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/api/images/<image_id>', methods=['PUT'])
+def update_image(image_id):
+    """Aggiorna metadati di un'immagine"""
+    try:
+        data = request.json
+        images_collection = db["images"]
+        
+        update_data = {
+            'title': data.get('title', ''),
+            'context': data.get('context', 'general'),
+            'updated_at': datetime.now()
+        }
+        
+        result = images_collection.update_one(
+            {'_id': ObjectId(image_id)},
+            {'$set': update_data}
+        )
+        
+        if result.modified_count > 0:
+            return jsonify({'success': True, 'message': 'Immagine aggiornata'})
+        else:
+            return jsonify({'error': 'Immagine non trovata'}), 404
+            
+    except Exception as e:
+        print(f"❌ Errore aggiornamento immagine: {e}")
+        return jsonify({'error': str(e)}), 500
 
 def reset_active_conversations(db, context_type=None):
     """Reset soft delle conversazioni: mantiene contesto ma elimina messaggi"""
