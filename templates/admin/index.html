@@ -22,7 +22,7 @@
         </header>
 
         <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card">
                     <div class="card-header bg-primary text-white">
                         <h2 class="h5 mb-0">Informazioni Festival</h2>
@@ -34,7 +34,7 @@
                 </div>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card">
                     <div class="card-header bg-success text-white">
                         <h2 class="h5 mb-0">Eventi e Programma</h2>
@@ -46,7 +46,7 @@
                 </div>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card">
                     <div class="card-header bg-info text-white">
                         <h2 class="h5 mb-0">Mappa</h2>
@@ -54,6 +54,18 @@
                     <div class="card-body">
                         <p>Gestisci i punti di interesse sulla mappa del festival.</p>
                         <a href="#" class="btn btn-info" id="map-btn">Gestisci</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header bg-warning text-white">
+                        <h2 class="h5 mb-0">🖼️ Immagini Festival</h2>
+                    </div>
+                    <div class="card-body">
+                        <p>Carica e gestisci immagini del festival (mappe, foto venue, lineup).</p>
+                        <a href="#" class="btn btn-warning" id="festival-images-btn">Gestisci</a>
                     </div>
                 </div>
             </div>
@@ -209,6 +221,51 @@
         </div>
     </template>
 
+    <template id="festival-images-template">
+        <h3>🖼️ Immagini Festival</h3>
+        <div class="mb-3">
+            <button class="btn btn-warning btn-sm" id="upload-festival-image-btn">📤 Carica Immagine</button>
+            <a href="/admin/images?context=festival" class="btn btn-outline-secondary btn-sm" target="_blank">🔗 Gestione Completa</a>
+        </div>
+        
+        <!-- Upload Form -->
+        <div id="festival-image-upload-form" class="mb-4 border p-3 rounded d-none">
+            <h4>📤 Carica Nuova Immagine Festival</h4>
+            <form id="festival-image-form" enctype="multipart/form-data">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="festival-image-file" class="form-label">Seleziona Immagine:</label>
+                            <input type="file" class="form-control" id="festival-image-file" name="image" accept="image/*" required>
+                            <small class="text-muted">JPG, PNG, GIF fino a 10MB</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="festival-image-title" class="form-label">Titolo:</label>
+                            <input type="text" class="form-control" id="festival-image-title" name="title" 
+                                   placeholder="Es. Mappa Festival 2025, Lineup, Main Stage...">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="festival-image-preview" class="border rounded p-2" style="min-height: 150px; background: #f8f9fa;">
+                            <p class="text-muted text-center mt-5">Anteprima immagine apparirà qui</p>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-warning">📤 Carica</button>
+                <button type="button" class="btn btn-secondary" id="cancel-festival-image-btn">Annulla</button>
+            </form>
+        </div>
+        
+        <!-- Images Grid -->
+        <div class="row" id="festival-images-grid">
+            <div class="col-12 text-center py-4">
+                <div class="spinner-border text-warning" role="status">
+                    <span class="visually-hidden">Caricamento immagini...</span>
+                </div>
+            </div>
+        </div>
+    </template>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -216,11 +273,13 @@
             const festivalInfoBtn = document.getElementById('festival-info-btn');
             const eventsBtn = document.getElementById('events-btn');
             const mapBtn = document.getElementById('map-btn');
+            const festivalImagesBtn = document.getElementById('festival-images-btn');
 
             // Templates
             const festivalInfoTemplate = document.getElementById('festival-info-template').content;
             const eventsTemplate = document.getElementById('events-template').content;
             const mapTemplate = document.getElementById('map-template').content;
+            const festivalImagesTemplate = document.getElementById('festival-images-template').content;
 
             // Festival Info
             festivalInfoBtn.addEventListener('click', function(e) {
@@ -259,6 +318,19 @@
                 
                 // Gestisci form
                 setupMapForm();
+            });
+
+            // Festival Images
+            festivalImagesBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                contentArea.innerHTML = '';
+                contentArea.appendChild(document.importNode(festivalImagesTemplate, true));
+                
+                // Carica immagini esistenti
+                fetchFestivalImages();
+                
+                // Gestisci form
+                setupFestivalImageForm();
             });
 
             // Funzioni per caricare dati e gestire form
@@ -747,6 +819,165 @@
                         alert('Errore nell\'eliminazione del punto mappa.');
                     });
                 }
+            }
+
+            // ================================
+            // FUNZIONI GESTIONE IMMAGINI FESTIVAL
+            // ================================
+            
+            function fetchFestivalImages() {
+                fetch('/admin/api/images?context=festival')
+                    .then(response => response.json())
+                    .then(images => {
+                        renderFestivalImages(images);
+                    })
+                    .catch(error => {
+                        console.error('Errore caricamento immagini festival:', error);
+                        document.getElementById('festival-images-grid').innerHTML = 
+                            '<div class="col-12"><p class="text-danger">Errore caricamento immagini</p></div>';
+                    });
+            }
+            
+            function renderFestivalImages(images) {
+                const grid = document.getElementById('festival-images-grid');
+                
+                if (images.length === 0) {
+                    grid.innerHTML = `
+                        <div class="col-12 text-center py-4">
+                            <i class="bi bi-images" style="font-size: 3rem; color: #dee2e6;"></i>
+                            <h5 class="text-muted mt-2">Nessuna immagine festival</h5>
+                            <p class="text-muted">Carica la prima immagine del festival!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '';
+                images.forEach(image => {
+                    html += `
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card">
+                                <img src="${image.thumbnail_url}" class="card-img-top" style="height: 200px; object-fit: cover;" 
+                                     onclick="viewFestivalImage('${image._id}')">
+                                <div class="card-body">
+                                    <h6 class="card-title">${image.title || 'Senza titolo'}</h6>
+                                    <small class="text-muted">
+                                        ${image.width}x${image.height}px • ${(image.bytes / 1024).toFixed(1)} KB
+                                    </small>
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-danger" onclick="deleteFestivalImage('${image._id}')">
+                                            🗑️ Elimina
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                grid.innerHTML = html;
+            }
+            
+            function setupFestivalImageForm() {
+                const uploadBtn = document.getElementById('upload-festival-image-btn');
+                const cancelBtn = document.getElementById('cancel-festival-image-btn');
+                const form = document.getElementById('festival-image-form');
+                const formContainer = document.getElementById('festival-image-upload-form');
+                const fileInput = document.getElementById('festival-image-file');
+                const preview = document.getElementById('festival-image-preview');
+                const titleInput = document.getElementById('festival-image-title');
+                
+                uploadBtn.addEventListener('click', function() {
+                    form.reset();
+                    preview.innerHTML = '<p class="text-muted text-center mt-5">Anteprima immagine apparirà qui</p>';
+                    formContainer.classList.remove('d-none');
+                });
+                
+                cancelBtn.addEventListener('click', function() {
+                    formContainer.classList.add('d-none');
+                });
+                
+                // Preview immagine
+                fileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        // Genera titolo automatico se vuoto
+                        if (!titleInput.value) {
+                            titleInput.value = file.name.split('.')[0];
+                        }
+                        
+                        // Mostra preview
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            preview.innerHTML = `<img src="${e.target.result}" class="img-fluid rounded" style="max-height: 140px;">`;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+                
+                // Submit form
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData();
+                    formData.append('image', fileInput.files[0]);
+                    formData.append('title', titleInput.value);
+                    formData.append('context', 'festival');
+                    
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '⏳ Caricamento...';
+                    submitBtn.disabled = true;
+                    
+                    fetch('/admin/api/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            formContainer.classList.add('d-none');
+                            fetchFestivalImages();
+                            alert('✅ Immagine caricata con successo!');
+                        } else {
+                            alert('❌ Errore: ' + (result.error || 'Caricamento fallito'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Errore upload:', error);
+                        alert('❌ Errore di connessione');
+                    })
+                    .finally(() => {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    });
+                });
+            }
+            
+            function viewFestivalImage(imageId) {
+                // Apri immagine in nuova finestra
+                window.open(`/admin/images`, '_blank');
+            }
+            
+            function deleteFestivalImage(imageId) {
+                if (!confirm('Sei sicuro di voler eliminare questa immagine?')) return;
+                
+                fetch(`/admin/api/images/${imageId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        fetchFestivalImages();
+                        alert('✅ Immagine eliminata');
+                    } else {
+                        alert('❌ Errore eliminazione: ' + (result.error || 'Errore sconosciuto'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Errore eliminazione:', error);
+                    alert('❌ Errore di connessione');
+                });
             }
         });
     </script>

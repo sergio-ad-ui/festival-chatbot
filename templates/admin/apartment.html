@@ -92,6 +92,11 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="images-tab" data-bs-toggle="tab" data-bs-target="#images-panel" type="button" role="tab">
+                    <i class="bi bi-images"></i> Immagini
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="conversations-tab" data-bs-toggle="tab" data-bs-target="#conversations-panel" type="button" role="tab">
                     <i class="bi bi-chat-dots"></i> Conversazioni
                 </button>
@@ -173,6 +178,24 @@
                     </div>
                     <div class="card-body">
                         <div id="smart-devices-list">
+                            <div class="text-center">
+                                <div class="spinner-border text-success" role="status">
+                                    <span class="visually-hidden">Caricamento...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Images Tab -->
+            <div class="tab-pane fade" id="images-panel" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-images"></i> Immagini Appartamento</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="apartment-images-list">
                             <div class="text-center">
                                 <div class="spinner-border text-success" role="status">
                                     <span class="visually-hidden">Caricamento...</span>
