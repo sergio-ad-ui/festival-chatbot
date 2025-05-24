@@ -352,11 +352,12 @@
                         priority: parseInt(document.getElementById('priority').value) || 0
                     };
                     
-                    const url = infoId ? `/admin/festival-info/${infoId}` : '/admin/festival-info';
-                    const method = infoId ? 'PUT' : 'POST';
+                    if (infoId) {
+                        data._id = infoId;
+                    }
                     
-                    fetch(url, {
-                        method: method,
+                    fetch('/admin/festival-info', {
+                        method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
@@ -367,6 +368,7 @@
                         if (result.success) {
                             formContainer.classList.add('d-none');
                             fetchFestivalInfo();
+                            alert(result.message); // Mostra messaggio con reset
                         } else {
                             alert('Errore nel salvataggio delle informazioni.');
                         }
@@ -415,23 +417,336 @@
                 }
             }
 
-            // Funzioni simili per eventi e punti mappa (da implementare)
+            // Funzioni per eventi
             function fetchEvents() {
-                // Implementazione simile a fetchFestivalInfo
-                document.getElementById('event-list').innerHTML = '<p class="text-center text-muted">Funzionalità in arrivo!</p>';
+                fetch('/admin/events')
+                    .then(response => response.json())
+                    .then(data => {
+                        const eventList = document.getElementById('event-list');
+                        eventList.innerHTML = '';
+                        
+                        if (data.length === 0) {
+                            eventList.innerHTML = '<p class="text-center text-muted">Nessun evento disponibile. Aggiungi il primo!</p>';
+                            return;
+                        }
+                        
+                        const table = document.createElement('table');
+                        table.className = 'table table-striped';
+                        table.innerHTML = `
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Data/Ora</th>
+                                    <th>Location</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        `;
+                        
+                        const tbody = table.querySelector('tbody');
+                        
+                        data.forEach(event => {
+                            const row = document.createElement('tr');
+                            const startTime = event.start_time ? new Date(event.start_time).toLocaleString('it-IT') : 'Non specificato';
+                            row.innerHTML = `
+                                <td>${event.name || 'Senza nome'}</td>
+                                <td>${startTime}</td>
+                                <td>${event.location || 'Non specificata'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success edit-event" data-id="${event._id}">Modifica</button>
+                                    <button class="btn btn-sm btn-danger delete-event" data-id="${event._id}">Elimina</button>
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                        
+                        eventList.appendChild(table);
+                        
+                        // Aggiungi event listeners
+                        document.querySelectorAll('.edit-event').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                editEvent(this.dataset.id);
+                            });
+                        });
+                        
+                        document.querySelectorAll('.delete-event').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                deleteEvent(this.dataset.id);
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Errore nel caricamento degli eventi:', error);
+                        document.getElementById('event-list').innerHTML = '<p class="text-danger">Errore nel caricamento degli eventi.</p>';
+                    });
             }
 
             function setupEventsForm() {
-                // Implementazione simile a setupFestivalInfoForm
+                const addBtn = document.getElementById('add-event-btn');
+                const cancelBtn = document.getElementById('cancel-event-btn');
+                const form = document.getElementById('event-form-element');
+                const formContainer = document.getElementById('event-form');
+                
+                addBtn.addEventListener('click', function() {
+                    form.reset();
+                    document.getElementById('event-id').value = '';
+                    formContainer.classList.remove('d-none');
+                });
+                
+                cancelBtn.addEventListener('click', function() {
+                    formContainer.classList.add('d-none');
+                });
+                
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const eventId = document.getElementById('event-id').value;
+                    const data = {
+                        name: document.getElementById('event-name').value,
+                        description: document.getElementById('event-description').value,
+                        start_time: document.getElementById('event-start').value,
+                        end_time: document.getElementById('event-end').value,
+                        location: document.getElementById('event-location').value,
+                        artists: document.getElementById('event-artists').value
+                    };
+                    
+                    if (eventId) {
+                        data._id = eventId;
+                    }
+                    
+                    fetch('/admin/events', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            formContainer.classList.add('d-none');
+                            fetchEvents();
+                            alert(result.message); // Mostra messaggio con reset
+                        } else {
+                            alert('Errore nel salvataggio dell\'evento.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Errore:', error);
+                        alert('Errore nel salvataggio dell\'evento.');
+                    });
+                });
+            }
+            
+            function editEvent(id) {
+                // Per semplicità, ricarichiamo tutti gli eventi e troviamo quello giusto
+                fetch('/admin/events')
+                    .then(response => response.json())
+                    .then(events => {
+                        const event = events.find(e => e._id === id);
+                        if (event) {
+                            document.getElementById('event-id').value = event._id;
+                            document.getElementById('event-name').value = event.name || '';
+                            document.getElementById('event-description').value = event.description || '';
+                            document.getElementById('event-start').value = event.start_time || '';
+                            document.getElementById('event-end').value = event.end_time || '';
+                            document.getElementById('event-location').value = event.location || '';
+                            document.getElementById('event-artists').value = event.artists || '';
+                            
+                            document.getElementById('event-form').classList.remove('d-none');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Errore nel caricamento dell\'evento per la modifica:', error);
+                        alert('Errore nel caricamento dell\'evento.');
+                    });
+            }
+            
+            function deleteEvent(id) {
+                if (confirm('Sei sicuro di voler eliminare questo evento?')) {
+                    fetch(`/admin/events/${id}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            fetchEvents();
+                            alert(result.message); // Mostra messaggio con reset
+                        } else {
+                            alert('Errore nell\'eliminazione dell\'evento.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Errore:', error);
+                        alert('Errore nell\'eliminazione dell\'evento.');
+                    });
+                }
             }
 
+            // Funzioni per punti mappa
             function fetchMapPoints() {
-                // Implementazione simile a fetchFestivalInfo
-                document.getElementById('point-list').innerHTML = '<p class="text-center text-muted">Funzionalità in arrivo!</p>';
+                fetch('/admin/map')
+                    .then(response => response.json())
+                    .then(data => {
+                        const pointList = document.getElementById('point-list');
+                        pointList.innerHTML = '';
+                        
+                        if (data.length === 0) {
+                            pointList.innerHTML = '<p class="text-center text-muted">Nessun punto mappa disponibile. Aggiungi il primo!</p>';
+                            return;
+                        }
+                        
+                        const table = document.createElement('table');
+                        table.className = 'table table-striped';
+                        table.innerHTML = `
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Tipo</th>
+                                    <th>Descrizione</th>
+                                    <th>Coordinate</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        `;
+                        
+                        const tbody = table.querySelector('tbody');
+                        
+                        data.forEach(point => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${point.name || 'Senza nome'}</td>
+                                <td>${point.type || 'Non specificato'}</td>
+                                <td>${point.description ? point.description.substring(0, 30) + '...' : 'Nessuna descrizione'}</td>
+                                <td>${point.lat || 0}, ${point.lng || 0}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info edit-point" data-id="${point._id}">Modifica</button>
+                                    <button class="btn btn-sm btn-danger delete-point" data-id="${point._id}">Elimina</button>
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                        
+                        pointList.appendChild(table);
+                        
+                        // Aggiungi event listeners
+                        document.querySelectorAll('.edit-point').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                editMapPoint(this.dataset.id);
+                            });
+                        });
+                        
+                        document.querySelectorAll('.delete-point').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                deleteMapPoint(this.dataset.id);
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Errore nel caricamento dei punti mappa:', error);
+                        document.getElementById('point-list').innerHTML = '<p class="text-danger">Errore nel caricamento dei punti mappa.</p>';
+                    });
             }
 
             function setupMapForm() {
-                // Implementazione simile a setupFestivalInfoForm
+                const addBtn = document.getElementById('add-point-btn');
+                const cancelBtn = document.getElementById('cancel-point-btn');
+                const form = document.getElementById('point-form-element');
+                const formContainer = document.getElementById('point-form');
+                
+                addBtn.addEventListener('click', function() {
+                    form.reset();
+                    document.getElementById('point-id').value = '';
+                    formContainer.classList.remove('d-none');
+                });
+                
+                cancelBtn.addEventListener('click', function() {
+                    formContainer.classList.add('d-none');
+                });
+                
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const pointId = document.getElementById('point-id').value;
+                    const data = {
+                        name: document.getElementById('point-name').value,
+                        description: document.getElementById('point-description').value,
+                        lat: parseFloat(document.getElementById('point-lat').value),
+                        lng: parseFloat(document.getElementById('point-lng').value),
+                        type: document.getElementById('point-type').value
+                    };
+                    
+                    if (pointId) {
+                        data._id = pointId;
+                    }
+                    
+                    fetch('/admin/map', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            formContainer.classList.add('d-none');
+                            fetchMapPoints();
+                            alert(result.message); // Mostra messaggio con reset
+                        } else {
+                            alert('Errore nel salvataggio del punto mappa.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Errore:', error);
+                        alert('Errore nel salvataggio del punto mappa.');
+                    });
+                });
+            }
+            
+            function editMapPoint(id) {
+                fetch('/admin/map')
+                    .then(response => response.json())
+                    .then(points => {
+                        const point = points.find(p => p._id === id);
+                        if (point) {
+                            document.getElementById('point-id').value = point._id;
+                            document.getElementById('point-name').value = point.name || '';
+                            document.getElementById('point-description').value = point.description || '';
+                            document.getElementById('point-lat').value = point.lat || '';
+                            document.getElementById('point-lng').value = point.lng || '';
+                            document.getElementById('point-type').value = point.type || '';
+                            
+                            document.getElementById('point-form').classList.remove('d-none');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Errore nel caricamento del punto mappa per la modifica:', error);
+                        alert('Errore nel caricamento del punto mappa.');
+                    });
+            }
+            
+            function deleteMapPoint(id) {
+                if (confirm('Sei sicuro di voler eliminare questo punto mappa?')) {
+                    fetch(`/admin/map/${id}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            fetchMapPoints();
+                            alert(result.message); // Mostra messaggio con reset
+                        } else {
+                            alert('Errore nell\'eliminazione del punto mappa.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Errore:', error);
+                        alert('Errore nell\'eliminazione del punto mappa.');
+                    });
+                }
             }
         });
     </script>

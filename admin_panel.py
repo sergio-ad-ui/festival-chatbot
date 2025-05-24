@@ -262,6 +262,15 @@ def festival_info():
     
     return jsonify(festival_info)
 
+@admin_bp.route('/festival-info/<info_id>', methods=['GET'])
+def get_single_festival_info(info_id):
+    """Ottiene una singola informazione festival"""
+    info = festival_info_collection.find_one({'_id': ObjectId(info_id)})
+    if info:
+        info['_id'] = str(info['_id'])
+        return jsonify(info)
+    return jsonify({'error': 'Informazione non trovata'}), 404
+
 @admin_bp.route('/festival-info/<info_id>', methods=['DELETE'])
 def delete_festival_info(info_id):
     festival_info_collection.delete_one({'_id': ObjectId(info_id)})
