@@ -331,6 +331,8 @@
         </div>
     </div>
 
+    <!-- Smart Device Modal (created dynamically) -->
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentApartment = 'apt_brescia';
@@ -378,13 +380,124 @@
         }
 
         function saveApartmentInfo() {
-            // Future: Implement save functionality
-            alert('Funzionalità in sviluppo');
+            const infoId = document.getElementById('info-id').value;
+            const data = {
+                category: document.getElementById('info-category').value,
+                content: document.getElementById('info-content').value,
+                priority: parseInt(document.getElementById('info-priority').value) || 0,
+                context_code: currentApartment
+            };
+            
+            if (infoId) {
+                data._id = infoId;
+            }
+            
+            fetch('/admin/api/apartment-info', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('apartmentInfoModal')).hide();
+                    loadApartmentInfo();
+                    showNotification('success', result.message);
+                } else {
+                    showNotification('error', 'Errore nel salvataggio');
+                }
+            })
+            .catch(error => {
+                console.error('Errore:', error);
+                showNotification('error', 'Errore di connessione');
+            });
         }
 
         function loadApartmentInfo() {
-            // Future: Load from API
-            document.getElementById('apartment-info-list').innerHTML = '<p>Caricamento informazioni apartamento...</p>';
+            fetch('/admin/api/apartment-info')
+                .then(response => response.json())
+                .then(data => {
+                    const infoList = document.getElementById('apartment-info-list');
+                    infoList.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        infoList.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> Nessuna informazione disponibile. Aggiungi la prima!</div>';
+                        return;
+                    }
+                    
+                    const table = document.createElement('table');
+                    table.className = 'table table-hover';
+                    table.innerHTML = `
+                        <thead class="table-success">
+                            <tr>
+                                <th>Categoria</th>
+                                <th>Contenuto</th>
+                                <th>Priorità</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    `;
+                    
+                    const tbody = table.querySelector('tbody');
+                    
+                    data.forEach(info => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><span class="badge bg-success">${info.category}</span></td>
+                            <td>${info.content.substring(0, 100)}${info.content.length > 100 ? '...' : ''}</td>
+                            <td><span class="badge bg-secondary">${info.priority || 0}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="editApartmentInfo('${info._id}')">
+                                    <i class="bi bi-pencil"></i> Modifica
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteApartmentInfo('${info._id}')">
+                                    <i class="bi bi-trash"></i> Elimina
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                    
+                    infoList.appendChild(table);
+                })
+                .catch(error => {
+                    console.error('Errore nel caricamento:', error);
+                    document.getElementById('apartment-info-list').innerHTML = '<div class="alert alert-danger">Errore nel caricamento delle informazioni</div>';
+                });
+        }
+        
+        function editApartmentInfo(id) {
+            fetch('/admin/api/apartment-info')
+                .then(response => response.json())
+                .then(data => {
+                    const info = data.find(item => item._id === id);
+                    if (info) {
+                        document.getElementById('info-id').value = info._id;
+                        document.getElementById('info-category').value = info.category;
+                        document.getElementById('info-content').value = info.content;
+                        document.getElementById('info-priority').value = info.priority || 0;
+                        
+                        new bootstrap.Modal(document.getElementById('apartmentInfoModal')).show();
+                    }
+                });
+        }
+        
+        function deleteApartmentInfo(id) {
+            if (confirm('Sei sicuro di voler eliminare questa informazione?')) {
+                fetch(`/admin/api/apartment-info/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        loadApartmentInfo();
+                        showNotification('success', result.message);
+                    }
+                });
+            }
         }
 
         // Local Services Functions
@@ -395,25 +508,416 @@
         }
 
         function saveLocalService() {
-            alert('Funzionalità in sviluppo');
+            const serviceId = document.getElementById('service-id').value;
+            const data = {
+                type: document.getElementById('service-type').value,
+                name: document.getElementById('service-name').value,
+                description: document.getElementById('service-description').value,
+                address: document.getElementById('service-address').value,
+                distance: document.getElementById('service-distance').value,
+                phone: document.getElementById('service-phone').value,
+                rating: parseFloat(document.getElementById('service-rating').value) || null,
+                hours: document.getElementById('service-hours').value,
+                maps_url: document.getElementById('service-maps-url').value,
+                context_code: currentApartment
+            };
+            
+            if (serviceId) {
+                data._id = serviceId;
+            }
+            
+            fetch('/admin/api/local-services', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('localServiceModal')).hide();
+                    loadLocalServices();
+                    showNotification('success', result.message);
+                } else {
+                    showNotification('error', 'Errore nel salvataggio');
+                }
+            })
+            .catch(error => {
+                console.error('Errore:', error);
+                showNotification('error', 'Errore di connessione');
+            });
         }
 
         function loadLocalServices() {
-            document.getElementById('local-services-list').innerHTML = '<p>Caricamento servizi locali...</p>';
+            const serviceFilter = document.querySelector('input[name="service-filter"]:checked')?.id || 'all-services';
+            const filterType = serviceFilter === 'all-services' ? 'all' : 
+                             serviceFilter === 'restaurants' ? 'restaurant' :
+                             serviceFilter === 'supermarkets' ? 'supermarket' :
+                             serviceFilter === 'pharmacies' ? 'pharmacy' :
+                             serviceFilter === 'attractions' ? 'attraction' : 'all';
+                             
+            fetch(`/admin/api/local-services?type=${filterType}`)
+                .then(response => response.json())
+                .then(data => {
+                    const servicesList = document.getElementById('local-services-list');
+                    servicesList.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        servicesList.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> Nessun servizio disponibile. Aggiungi il primo!</div>';
+                        return;
+                    }
+                    
+                    // Group by service type
+                    const groupedServices = {};
+                    data.forEach(service => {
+                        const type = service.type || 'other';
+                        if (!groupedServices[type]) {
+                            groupedServices[type] = [];
+                        }
+                        groupedServices[type].push(service);
+                    });
+                    
+                    const typeNames = {
+                        'restaurant': '🍽️ Ristoranti',
+                        'cafe': '☕ Bar e Caffè', 
+                        'supermarket': '🛒 Supermercati',
+                        'pharmacy': '💊 Farmacie',
+                        'attraction': '🎯 Attrazioni',
+                        'transport': '🚌 Trasporti',
+                        'other': '📍 Altri Servizi'
+                    };
+                    
+                    Object.keys(groupedServices).forEach(type => {
+                        const section = document.createElement('div');
+                        section.className = 'mb-4';
+                        section.innerHTML = `
+                            <h6 class="border-bottom pb-2">${typeNames[type] || type}</h6>
+                            <div class="row" id="services-${type}"></div>
+                        `;
+                        
+                        const servicesContainer = section.querySelector(`#services-${type}`);
+                        
+                        groupedServices[type].forEach(service => {
+                            const serviceCard = document.createElement('div');
+                            serviceCard.className = 'col-md-6 mb-3';
+                            serviceCard.innerHTML = `
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="card-title">${service.name}</h6>
+                                            ${service.rating ? `<span class="badge bg-warning">⭐ ${service.rating}</span>` : ''}
+                                        </div>
+                                        <p class="card-text small">${service.description}</p>
+                                        ${service.distance ? `<p class="text-muted small"><i class="bi bi-geo-alt"></i> ${service.distance}</p>` : ''}
+                                        ${service.phone ? `<p class="text-muted small"><i class="bi bi-telephone"></i> ${service.phone}</p>` : ''}
+                                        ${service.hours ? `<p class="text-muted small"><i class="bi bi-clock"></i> ${service.hours}</p>` : ''}
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary" onclick="editLocalService('${service._id}')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" onclick="deleteLocalService('${service._id}')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            ${service.maps_url ? `<a href="${service.maps_url}" target="_blank" class="btn btn-outline-info"><i class="bi bi-map"></i></a>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            servicesContainer.appendChild(serviceCard);
+                        });
+                        
+                        servicesList.appendChild(section);
+                    });
+                    
+                    // Setup filter listeners
+                    document.querySelectorAll('input[name="service-filter"]').forEach(radio => {
+                        radio.addEventListener('change', loadLocalServices);
+                    });
+                })
+                .catch(error => {
+                    console.error('Errore nel caricamento servizi:', error);
+                    document.getElementById('local-services-list').innerHTML = '<div class="alert alert-danger">Errore nel caricamento dei servizi</div>';
+                });
+        }
+        
+        function editLocalService(id) {
+            fetch('/admin/api/local-services')
+                .then(response => response.json())
+                .then(data => {
+                    const service = data.find(item => item._id === id);
+                    if (service) {
+                        document.getElementById('service-id').value = service._id;
+                        document.getElementById('service-type').value = service.type;
+                        document.getElementById('service-name').value = service.name;
+                        document.getElementById('service-description').value = service.description;
+                        document.getElementById('service-address').value = service.address || '';
+                        document.getElementById('service-distance').value = service.distance || '';
+                        document.getElementById('service-phone').value = service.phone || '';
+                        document.getElementById('service-rating').value = service.rating || '';
+                        document.getElementById('service-hours').value = service.hours || '';
+                        document.getElementById('service-maps-url').value = service.maps_url || '';
+                        
+                        new bootstrap.Modal(document.getElementById('localServiceModal')).show();
+                    }
+                });
+        }
+        
+        function deleteLocalService(id) {
+            if (confirm('Sei sicuro di voler eliminare questo servizio?')) {
+                fetch(`/admin/api/local-services/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        loadLocalServices();
+                        showNotification('success', result.message);
+                    }
+                });
+            }
         }
 
         // Smart Home Functions
         function addSmartDevice() {
-            alert('Form smart device in arrivo');
+            showSmartDeviceModal();
+        }
+        
+        function showSmartDeviceModal(device = null) {
+            const modalHtml = `
+                <div class="modal fade" id="smartDeviceModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">${device ? 'Modifica' : 'Aggiungi'} Dispositivo Smart</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="smart-device-form">
+                                    <input type="hidden" id="device-id" value="${device?._id || ''}">
+                                    <div class="mb-3">
+                                        <label for="device-name" class="form-label">Nome Dispositivo</label>
+                                        <input type="text" class="form-control" id="device-name" value="${device?.device || ''}" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="device-type-select" class="form-label">Tipo</label>
+                                        <select class="form-select" id="device-type-select" required>
+                                            <option value="">Seleziona tipo...</option>
+                                            <option value="lock" ${device?.device_type === 'lock' ? 'selected' : ''}>Serratura Smart (TTLock)</option>
+                                            <option value="tv" ${device?.device_type === 'tv' ? 'selected' : ''}>Smart TV</option>
+                                            <option value="ac" ${device?.device_type === 'ac' ? 'selected' : ''}>Aria Condizionata</option>
+                                            <option value="wifi" ${device?.device_type === 'wifi' ? 'selected' : ''}>WiFi</option>
+                                            <option value="appliance" ${device?.device_type === 'appliance' ? 'selected' : ''}>Elettrodomestico</option>
+                                            <option value="other" ${device?.device_type === 'other' ? 'selected' : ''}>Altro</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="device-instructions" class="form-label">Istruzioni</label>
+                                        <textarea class="form-control" id="device-instructions" rows="5" required>${device?.instructions || ''}</textarea>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                <button type="button" class="btn btn-success" onclick="saveSmartDevice()">Salva</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('smartDeviceModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            new bootstrap.Modal(document.getElementById('smartDeviceModal')).show();
+        }
+        
+        function saveSmartDevice() {
+            const deviceId = document.getElementById('device-id').value;
+            const data = {
+                device: document.getElementById('device-name').value,
+                device_type: document.getElementById('device-type-select').value,
+                instructions: document.getElementById('device-instructions').value,
+                context_code: currentApartment
+            };
+            
+            if (deviceId) {
+                data._id = deviceId;
+            }
+            
+            fetch('/admin/api/smart-home', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('smartDeviceModal')).hide();
+                    loadSmartDevices();
+                    showNotification('success', result.message);
+                } else {
+                    showNotification('error', 'Errore nel salvataggio');
+                }
+            })
+            .catch(error => {
+                console.error('Errore:', error);
+                showNotification('error', 'Errore di connessione');
+            });
         }
 
         function loadSmartDevices() {
-            document.getElementById('smart-devices-list').innerHTML = '<p>Caricamento dispositivi smart...</p>';
+            fetch('/admin/api/smart-home')
+                .then(response => response.json())
+                .then(data => {
+                    const devicesList = document.getElementById('smart-devices-list');
+                    devicesList.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        devicesList.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> Nessun dispositivo configurato. Aggiungi il primo!</div>';
+                        return;
+                    }
+                    
+                    const devicesContainer = document.createElement('div');
+                    devicesContainer.className = 'row';
+                    
+                    data.forEach(device => {
+                        const deviceCard = document.createElement('div');
+                        deviceCard.className = 'col-md-6 mb-3';
+                        
+                        const deviceIcon = device.device_type === 'lock' ? '🔒' :
+                                         device.device_type === 'tv' ? '📺' :
+                                         device.device_type === 'ac' ? '❄️' :
+                                         device.device_type === 'wifi' ? '📶' :
+                                         device.device_type === 'appliance' ? '🏠' : '⚙️';
+                        
+                        deviceCard.innerHTML = `
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6 class="card-title">${deviceIcon} ${device.device}</h6>
+                                        <span class="badge bg-info">${device.device_type || 'other'}</span>
+                                    </div>
+                                    <p class="card-text small">${device.instructions.substring(0, 100)}${device.instructions.length > 100 ? '...' : ''}</p>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" onclick="editSmartDevice('${device._id}')">
+                                            <i class="bi bi-pencil"></i> Modifica
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="deleteSmartDevice('${device._id}')">
+                                            <i class="bi bi-trash"></i> Elimina
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        devicesContainer.appendChild(deviceCard);
+                    });
+                    
+                    devicesList.appendChild(devicesContainer);
+                })
+                .catch(error => {
+                    console.error('Errore nel caricamento dispositivi:', error);
+                    document.getElementById('smart-devices-list').innerHTML = '<div class="alert alert-danger">Errore nel caricamento dei dispositivi</div>';
+                });
+        }
+        
+        function editSmartDevice(id) {
+            fetch('/admin/api/smart-home')
+                .then(response => response.json())
+                .then(data => {
+                    const device = data.find(item => item._id === id);
+                    if (device) {
+                        showSmartDeviceModal(device);
+                    }
+                });
+        }
+        
+        function deleteSmartDevice(id) {
+            if (confirm('Sei sicuro di voler eliminare questo dispositivo?')) {
+                fetch(`/admin/api/smart-home/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        loadSmartDevices();
+                        showNotification('success', result.message);
+                    }
+                });
+            }
         }
 
         // Conversations Functions
         function loadConversations() {
-            document.getElementById('conversations-list').innerHTML = '<p>Caricamento conversazioni...</p>';
+            fetch('/admin/api/conversations?context=apt_brescia&limit=20')
+                .then(response => response.json())
+                .then(data => {
+                    const conversationsList = document.getElementById('conversations-list');
+                    conversationsList.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        conversationsList.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> Nessuna conversazione recente</div>';
+                        return;
+                    }
+                    
+                    data.forEach(conversation => {
+                        const conversationCard = document.createElement('div');
+                        conversationCard.className = 'card mb-3';
+                        
+                        const lastMessage = conversation.messages && conversation.messages.length > 0 ? 
+                                          conversation.messages[conversation.messages.length - 1] : null;
+                        
+                        const lastUpdate = new Date(conversation.last_updated).toLocaleString('it-IT');
+                        
+                        conversationCard.innerHTML = `
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h6 class="card-title">Utente: ${conversation.sender_id.substring(0, 10)}...</h6>
+                                    <span class="badge bg-secondary">${lastUpdate}</span>
+                                </div>
+                                ${lastMessage ? `
+                                    <p class="card-text"><strong>Ultimo messaggio:</strong> ${lastMessage.content.substring(0, 100)}${lastMessage.content.length > 100 ? '...' : ''}</p>
+                                ` : '<p class="card-text text-muted">Conversazione senza messaggi</p>'}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-success">${conversation.context || 'sconosciuto'}</span>
+                                    <small class="text-muted">${conversation.messages ? conversation.messages.length : 0} messaggi</small>
+                                </div>
+                            </div>
+                        `;
+                        conversationsList.appendChild(conversationCard);
+                    });
+                })
+                .catch(error => {
+                    console.error('Errore nel caricamento conversazioni:', error);
+                    document.getElementById('conversations-list').innerHTML = '<div class="alert alert-danger">Errore nel caricamento delle conversazioni</div>';
+                });
+        }
+        
+        // Utility Functions
+        function showNotification(type, message) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 9999;" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                const alert = document.querySelector('.alert:last-of-type');
+                if (alert) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
+            }, 3000);
         }
     </script>
 </body>
