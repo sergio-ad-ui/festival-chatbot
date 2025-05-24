@@ -21,7 +21,6 @@ load_dotenv()
 app = Flask(__name__)
 
 # Configurazione OpenAI
-openai.api_key = os.getenv("OPENAI_API_KEY")
 openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Configurazione MongoDB
