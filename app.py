@@ -136,6 +136,56 @@ def handle_text_message(message):
         )
         return
     
+    # 🖼️ GESTIONE RICHIESTE IMMAGINI
+    image_keywords = ["immagine", "immagini", "foto", "mappa", "layout", "pianta"]
+    if any(keyword in message_text.lower() for keyword in image_keywords):
+        print(f"📸 DEBUG: Richiesta immagine rilevata per contesto '{context}'")
+        
+        # Cerca immagini nel database per questo contesto
+        images_collection = db["images"]
+        images = list(images_collection.find({"context": context}).limit(3))
+        
+        if images:
+            print(f"📸 DEBUG: Trovate {len(images)} immagini per contesto '{context}'")
+            
+            # Invia la prima immagine disponibile
+            first_image = images[0]
+            image_caption = f"🖼️ {first_image.get('title', 'Immagine del festival')}"
+            
+            success = send_whatsapp_message_with_image(
+                sender_id, 
+                image_caption, 
+                first_image.get('public_id'), 
+                ""
+            )
+            
+            if success:
+                # Aggiungi alla conversazione
+                conversation["messages"].append({
+                    "role": "user",
+                    "content": message_text,
+                    "timestamp": datetime.now()
+                })
+                conversation["messages"].append({
+                    "role": "assistant", 
+                    "content": f"📸 Immagine inviata: {first_image.get('title', 'Immagine')}",
+                    "timestamp": datetime.now()
+                })
+                
+                # Aggiorna nel database
+                conversations_collection.update_one(
+                    {"_id": conversation["_id"]},
+                    {"$set": {"messages": conversation["messages"], "last_updated": datetime.now()}}
+                )
+                
+                print(f"✅ DEBUG: Immagine inviata con successo!")
+                return
+            else:
+                print(f"❌ DEBUG: Errore invio immagine")
+        else:
+            print(f"📸 DEBUG: Nessuna immagine trovata per contesto '{context}'")
+            # Continua con risposta AI normale
+    
     # Aggiungi il messaggio alla conversazione
     conversation["messages"].append({
         "role": "user",
